@@ -1,6 +1,9 @@
 import * as d3 from 'd3';
+import { path } from 'd3';
+import debounce from 'lodash.debounce';
 import * as moment from 'moment';
 import { data } from './data';
+import { colors } from './color';
 window.data = data;
 
 const windPaths = [
@@ -25,6 +28,29 @@ const windPaths = [
     'M 1.9 5 L 9 0 0 0 0 30.05 1.8 30.05 1.8 20.15 9 15.1 1.8 15.1 1.8 15.05 9 10 1.9 10 9 5 1.9 5 M 1.8 3.25 L 1.8 1.25 4.65 1.25 1.8 3.25 M 1.8 11.25 L 4.65 11.25 1.8 13.25 1.8 11.25 M 1.8 6.25 L 4.65 6.25 1.8 8.25 1.8 6.25 M 1.8 18.35 L 1.8 16.35 4.65 16.35 1.8 18.35 Z'
 ]
 
+const pathsCenter = [
+    { x: 2, y: 2},
+    { x: 4.5, y: 15},
+    { x: 4.5, y: 15},
+    { x: 4.5, y: 15},
+    { x: 4.5, y: 15},
+    { x: 4.5, y: 15},
+    { x: 4.5, y: 15},
+    { x: 4.5, y: 15},
+    { x: 4.5, y: 15},
+    { x: 4.5, y: 15},
+    { x: 4.5, y: 15},
+    { x: 4.5, y: 15},
+    { x: 4.5, y: 15},
+    { x: 4.5, y: 15},
+    { x: 4.5, y: 15},
+    { x: 4.5, y: 15},
+    { x: 4.5, y: 15},
+    { x: 4.5, y: 15},
+    { x: 4.5, y: 15},
+    { x: 4.5, y: 15}
+]
+
 
 function timeFormat (timeStamp, index, textList) {
     // console.log(timeStamp, index, textList)
@@ -33,14 +59,24 @@ function timeFormat (timeStamp, index, textList) {
     // return moment(timeStamp).format('HH:mm');
 }
 
-function drawArc(svg, data, boxArea, transform, x, y) {
-    // svg.
+const _drawArc = debounce(drawArc, 200)
+
+let counter = 0;
+function drawArc(svg, data, boxArea, transform, x, y, width, height) {
+    console.log('counter', counter++)
     const dataAreaDom = document.querySelector('svg .data--area');
     if (dataAreaDom) {
         document.querySelector('svg .data--area').remove();
     }
-    const group = svg.append('group').attr('class', 'data--area')
+    const group = svg.append('g').attr('class', 'data--area')
     const { xMinVal, xMaxVal, yMinVal, yMaxVal } = boxArea;
+
+    const xMinPiexl = x(xMinVal);
+    const xMaxPiexl = x(xMaxVal);
+    // 
+    const delta = xMaxPiexl - xMinPiexl
+    // scale
+    const scale = delta / width * transform.k / 1.5;
     data.forEach(item => {
         if (item.timeStamp <= xMaxVal && item.timeStamp >= xMinVal) {
             const xCoord = transform.applyX(x(item.timeStamp));
@@ -50,13 +86,24 @@ function drawArc(svg, data, boxArea, transform, x, y) {
                     if (mtr && mtr.hei > yMinVal && mtr.hei < yMaxVal) {
                         let yCoord = transform.applyY(y(+mtr.hei));
 
-                        group.append('circle')
-                             .attr('cx', xCoord )
-                             .attr('cy', yCoord )
-                             .attr('r','20')
-                             .attr('stroke','orange')
-                             .attr('stroke-width','2')
-                            //  .attr('fill','steelblue')
+                        // group.append('circle')
+                        //      .attr('cx', xCoord )
+                        //      .attr('cy', yCoord )
+                        //      .attr('r','5')
+                        //      .attr('stroke','orange')
+                        //      .attr('stroke-width','2')
+                        //      .attr('fill','steelblue')
+                        // scale(${delta / width * transform.k})
+                        let index = (+mtr.vh) | 0;
+                        index = index > windPaths.length ? windPaths.length - 1  : index;
+                        group.append('path')
+                             .attr('transform', `
+                                    translate(${xCoord - pathsCenter[index].x}, ${yCoord - pathsCenter[index].y}) 
+                                    scale(${scale}, ${scale}) 
+                                    rotate(${+mtr.dir})`
+                                   )
+                             .attr('d', windPaths[index] )
+                             .attr('fill', colors[index])
                     }
                 })
             }
@@ -175,7 +222,7 @@ export function createZoomDemo (options) {
     gY.call(yAxis.scale(transform.rescaleY(y)));
 
     const boxArea = viewBoxFilter(transform, x, y, invertX, invertY, width, height);
-    drawArc(svg, data, boxArea, transform, x, y);
+    _drawArc(svg, data, boxArea, transform, x, y, width, height);
 
     const { xMinVal, xMaxVal, yMinVal, yMaxVal } = boxArea;
     console.log(xMinVal, xMaxVal, yMinVal, yMaxVal);

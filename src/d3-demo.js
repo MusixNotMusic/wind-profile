@@ -52,11 +52,12 @@ const pathsCenter = [
 ]
 
 
+
 function timeFormat (timeStamp, index, textList) {
     // console.log(timeStamp, index, textList)
-    const formatString = index === 1 ? 'YYYY-MM-DD HH:mm' : 'HH:mm';
-    return index === 0 ? '' : moment(timeStamp).format(formatString);
-    // return moment(timeStamp).format('HH:mm');
+    const formatString = index === 0 ? 'YYYY-MM-DD HH:mm' : 'HH:mm';
+    // return index === 0 ? '' : moment(timeStamp).format(formatString);
+    return moment(timeStamp).format(formatString);
 }
 
 const _drawArc = debounce(drawArc, 200)
@@ -68,7 +69,9 @@ function drawArc(svg, data, boxArea, transform, x, y, width, height) {
     if (dataAreaDom) {
         document.querySelector('svg .data--area').remove();
     }
-    const group = svg.append('g').attr('class', 'data--area')
+    const group = svg.append('g')
+                     .attr('class', 'data--area')
+                     .attr('transform', 'translate(50, 0)')
     const { xMinVal, xMaxVal, yMinVal, yMaxVal } = boxArea;
 
     const xMinPiexl = x(xMinVal);
@@ -85,17 +88,8 @@ function drawArc(svg, data, boxArea, transform, x, y, width, height) {
                     mtr.hei = +mtr.hei;
                     if (mtr && mtr.hei > yMinVal && mtr.hei < yMaxVal) {
                         let yCoord = transform.applyY(y(+mtr.hei));
-
-                        // group.append('circle')
-                        //      .attr('cx', xCoord )
-                        //      .attr('cy', yCoord )
-                        //      .attr('r','5')
-                        //      .attr('stroke','orange')
-                        //      .attr('stroke-width','2')
-                        //      .attr('fill','steelblue')
-                        // scale(${delta / width * transform.k})
                         let index = (+mtr.vh) | 0;
-                        index = index > windPaths.length ? windPaths.length - 1  : index;
+                        index = index > windPaths.length ? windPaths.length - 1 : index;
                         group.append('path')
                              .attr('transform', `
                                     translate(${xCoord - pathsCenter[index].x}, ${yCoord - pathsCenter[index].y}) 
@@ -103,7 +97,7 @@ function drawArc(svg, data, boxArea, transform, x, y, width, height) {
                                     rotate(${+mtr.dir})`
                                    )
                              .attr('d', windPaths[index] )
-                             .attr('fill', colors[index])
+                             .attr('fill', colors[index * 3 + 40])
                     }
                 })
             }
@@ -116,6 +110,7 @@ function drawArc(svg, data, boxArea, transform, x, y, width, height) {
 let maxTimeStamp = 0;
 let minTimeStamp = Infinity;
 let maxHeight = 0;
+
 function calculateData () {
     data.forEach(item => {
         let timeStamp = moment(item.groundTime).valueOf()
@@ -146,56 +141,61 @@ function widthPiexlToColDataVal (width, transform, invertX) {
     return invertY(transform.invertY(height))
 }
 
-function createAxis (width, height, options) {
+function createAxis (options) {
     const { minX, maxX, minY, maxY } = options;
+    const { top, bottom, left, right, width, height} = globalOptions;
     // axis x
     const x = d3.scaleLinear()
-        .range([0, width])
+        .range([left, width - right])
         .domain([minX, maxX])
     
     const invertX = d3.scaleLinear()
-        .domain([0, width])
+        .domain([left, width - right])
         .range([minX, maxX])
 
     const xAxis = d3.axisBottom(x)
         .ticks(((width + 2) / (height + 2)) * 10)
-        .tickSize(height)
-        .tickPadding(8 - height)
+        // .tickSize(5)
+        // .tickPadding(bottom)
         .tickFormat(timeFormat)
+        // .tickValues(data)
     // axis y
     const y = d3.scaleLinear()
         .domain([minY, maxY])
-        .range([-1, height + 1])
+        .range([height - bottom, top])
     
     const invertY = d3.scaleLinear()
         .range([minY, maxY])
-        .domain([-1, height + 1])
+        .domain([height - bottom, top])
 
     const yAxis = d3.axisRight(y)
         .ticks(10)
-        .tickSize(width)
-        .tickPadding(30 - width)
+        .tickSize(width - right)
+        .tickPadding(-width + 20)
     
     return { xAxis, yAxis, x, y, invertX, invertY }
 }
 
+let globalOptions = null;
 export function createZoomDemo (options) {
   const { top, right, bottom, left } = options.padding || {top: 10, left: 10, bottom: 10, right: 10}
-  const boxWidth = options.width + right + left;
-  const boxHeight = options.height + top + bottom;
+  const boxWidth = options.width - left - right;
+  const boxHeight = options.height - top - bottom;
 
   const width = options.width;
   const height = options.height;
+
+  globalOptions = options;
 
   calculateData();
   
   // svg DOM  
   const svg = d3.create("svg")
-       .attr("viewBox", [top, right, width, height])
+       .attr("viewBox", [0, 0, width, height])
        .attr("width", boxWidth)
        .attr("height", boxHeight)
 
-  const { xAxis, yAxis, x, y, invertX, invertY } = createAxis(width, height, { maxX: maxTimeStamp, minX: minTimeStamp, minY: 0, maxY: maxHeight});
+  const { xAxis, yAxis, x, y, invertX, invertY } = createAxis({ maxX: maxTimeStamp, minX: minTimeStamp, minY: 0, maxY: maxHeight});
 
   window._x = x
   window._y = y
@@ -203,8 +203,20 @@ export function createZoomDemo (options) {
   window.invertY = invertY
   window.svg = svg
 
-  const gX = svg.append("g").attr("class", "axis axis--x").call(xAxis);
-  const gY = svg.append("g").attr("class", "axis axis--y").call(yAxis);
+  const gX = svg.append("g")
+                .attr("class", "axis axis--x")
+                .attr("transform", `translate(0, ${height - bottom - top})`)
+                .call(xAxis);
+  const gY = svg.append("g")
+                .attr("class", "axis axis--y")
+                .attr("transform", `translate(${left}, 0)`)
+                .call(yAxis)
+                .call(g => g.select(".domain")
+                .remove()).call(g => g.selectAll(".tick:not(:first-of-type) line")
+                .attr("stroke-opacity", 0.5)
+                .attr("stroke-dasharray", "2,2")).call(g => g.selectAll(".tick text")
+                .attr("x", 4)
+                .attr("dy", -4));;
 
   const zoom = d3.zoom()
     .scaleExtent([1, 40])
@@ -221,11 +233,10 @@ export function createZoomDemo (options) {
     gX.call(xAxis.scale(transform.rescaleX(x)));
     gY.call(yAxis.scale(transform.rescaleY(y)));
 
-    const boxArea = viewBoxFilter(transform, x, y, invertX, invertY, width, height);
+    const boxArea = viewBoxFilter(transform, x, y, invertX, invertY);
     _drawArc(svg, data, boxArea, transform, x, y, width, height);
-
-    const { xMinVal, xMaxVal, yMinVal, yMaxVal } = boxArea;
-    console.log(xMinVal, xMaxVal, yMinVal, yMaxVal);
+    // const { xMinVal, xMaxVal, yMinVal, yMaxVal } = boxArea;
+    // console.log(xMinVal, xMaxVal, yMinVal, yMaxVal);
   }
 
   function reset() {
@@ -254,11 +265,13 @@ export function createZoomDemo (options) {
  * @param {*} height 
  * @returns 
  */
-function viewBoxFilter (transform, x, y, invertX, invertY, width, height) {
-    const xMinVal = widthPiexlToColDataVal(0,      transform, invertX);
-    const xMaxVal = widthPiexlToColDataVal(width,  transform, invertX);
-    const yMinVal = heightPiexlToRowDataVal(0,      transform, invertY);
-    const yMaxVal = heightPiexlToRowDataVal(height, transform, invertY);
+function viewBoxFilter (transform, x, y, invertX, invertY) {
+    const { top, bottom, left, right, width, height} = globalOptions;
+
+    const xMinVal = widthPiexlToColDataVal(left,      transform, invertX);
+    const xMaxVal = widthPiexlToColDataVal(width - right,  transform, invertX);
+    const yMaxVal = heightPiexlToRowDataVal(top,      transform, invertY);
+    const yMinVal = heightPiexlToRowDataVal(height - bottom, transform, invertY);
     return {
         xMinVal,
         xMaxVal,

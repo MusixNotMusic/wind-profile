@@ -53,20 +53,20 @@ export class WindProfileSvg {
         const { minX, maxX, minY, maxY } = this.bboxFromData;
         const { top, right, bottom, left, width, height } = this.bboxFromWindow;
         this.xScale = d3.scaleLinear()
-            .range([left, width - right])
-            .domain([minX, maxX]);
+            .range([0, width - right - left])
+            .domain([minX, maxX])
 
         this.invertXScale = d3.scaleLinear()
-            .domain([left, width - right])
+            .domain([0, width - right - left])
             .range([minX, maxX]);
 
         this.yScale = d3.scaleLinear()
             .domain([minY, maxY])
-            .range([height - bottom, top]);
+            .range([height - bottom - top, 0])
 
         this.invertYScale = d3.scaleLinear()
             .range([minY, maxY])
-            .domain([height - bottom, top]);
+            .domain([height - bottom - top, 0]);
     }
     /**
      * 创建 坐标轴
@@ -86,7 +86,7 @@ export class WindProfileSvg {
     }
     /**
      * 宽度像素 映射 数据
-     * @param {*} transform 
+     * @param {*} transform
      * @returns 
      */
     widthPiexlToColDataVal (widthPixel, transform) { 
@@ -104,10 +104,10 @@ export class WindProfileSvg {
 
     viewBoxFilter (transform) {
         const { top, right, bottom, left, width, height } = this.bboxFromWindow;
-        const xMinVal = this.widthPiexlToColDataVal(left,      transform);
-        const xMaxVal = this.widthPiexlToColDataVal(width - right,  transform);
-        const yMinVal = this.heightPiexlToRowDataVal(height - bottom,      transform);
-        const yMaxVal = this.heightPiexlToRowDataVal(top, transform);
+        const xMinVal = this.widthPiexlToColDataVal(0,      transform);
+        const xMaxVal = this.widthPiexlToColDataVal(width - right - left,  transform);
+        const yMinVal = this.heightPiexlToRowDataVal(height - top - bottom,      transform);
+        const yMaxVal = this.heightPiexlToRowDataVal(0, transform);
         return {
             xMinVal,
             xMaxVal,
@@ -157,7 +157,7 @@ export class WindProfileSvg {
                         if (mtr && mtr.hei > yMinVal && mtr.hei < yMaxVal) {
                             let yCoord = transform.applyY(this.yScale(+mtr.hei));
                             let index = (+mtr.vh) | 0;
-                            index = index > windPaths.length ? windPaths.length - 1  : index;
+                            index = index > windPaths.length ? windPaths.length - 1 : index;
                             group.append('path')
                                  .attr('transform', `
                                         translate(${xCoord - pathsCenter[index].x}, ${yCoord - pathsCenter[index].y}) 
@@ -165,7 +165,7 @@ export class WindProfileSvg {
                                         rotate(${+mtr.dir})`
                                        )
                                  .attr('d', windPaths[index] )
-                                 .attr('fill', colors[index])
+                                 .attr('fill', colors[index * 3 + 40])
                         }
                     })
                 }

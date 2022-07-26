@@ -2,12 +2,12 @@ import * as d3 from 'd3';
 import debounce from 'lodash.debounce';
 import * as moment from 'moment';
 import { data } from './data';
-import { colors } from './color';
+import { colors, rectColors } from './color';
 import { windPaths, pathsCenter } from './constant';
 
 export class WindProfileSvg {
     bboxFromData = null; // 数据边界
-    bboxFromWindow = null; // 数据窗口彬姐
+    bboxFromWindow = null; // 数据窗口
     constructor(options) {
         this._drawWind = debounce(this.drawWind.bind(this), 200);
 
@@ -126,7 +126,7 @@ export class WindProfileSvg {
 
 
     drawWind(svg, data, transform) {
-        const { width, height, top, right } = this.bboxFromWindow;
+        const { width, height, top, right, left, bottom } = this.bboxFromWindow;
 
         const boxArea = this.viewBoxFilter(transform);
         
@@ -146,30 +146,74 @@ export class WindProfileSvg {
         // 
         const delta = xMaxPiexl - xMinPiexl
         // scale
-        const scale = delta / width * transform.k / 1.5;
+        // const scale = delta / width * transform.k / 1.5;
 
+        const filterArr = [];
+        let maxHeight = -1;
         data.forEach(item => {
             if (item.timeStamp <= xMaxVal && item.timeStamp >= xMinVal) {
-                const xCoord = transform.applyX(this.xScale(item.timeStamp));
+                const obj = { timeStamp: item.timeStamp }
+                const metrics = [];
                 if (item.metricList && item.metricList.length > 0) {
                     item.metricList.forEach(mtr => {
                         mtr.hei = +mtr.hei;
                         if (mtr && mtr.hei > yMinVal && mtr.hei < yMaxVal) {
-                            let yCoord = transform.applyY(this.yScale(+mtr.hei));
-                            let index = (+mtr.vh) | 0;
-                            index = index > windPaths.length ? windPaths.length - 1 : index;
-                            group.append('path')
-                                 .attr('transform', `
-                                        translate(${xCoord - pathsCenter[index].x}, ${yCoord - pathsCenter[index].y}) 
-                                        scale(${scale}, ${scale}) 
-                                        rotate(${+mtr.dir})`
-                                       )
-                                 .attr('d', windPaths[index] )
-                                 .attr('fill', colors[index * 3 + 40])
+                            metrics.push(mtr);
                         }
                     })
                 }
+                obj.metricList = metrics;
+                if (metrics.length > maxHeight) {
+                    maxHeight = metrics.length;
+                }
+                filterArr.push(obj);
             }
+        })
+        let avgWidth = (width - left - right)  / filterArr.length;
+        let avgHeight =  (height - top - bottom) / maxHeight;
+        let scaleW = avgWidth / 9;
+        let scaleH = avgHeight / 30;
+        scaleW = scaleW > 1 ? 1 : scaleW;
+        scaleH = scaleH > 1 ? 1 : scaleH;
+        console.log('scale ==>', scaleW, scaleH);
+
+        let overflowHight = 0;
+        filterArr.forEach(item => {
+            const xCoord = transform.applyX(this.xScale(item.timeStamp));
+            item.metricList.forEach((mtr, idx)=> {
+                let yCoord = transform.applyY(this.yScale(+mtr.hei));
+                let index = (+mtr.vh) | 0;
+                index = index > windPaths.length ? windPaths.length - 1 : index;
+                
+                if (idx === 0 && (yCoord + avgHeight / 2 > height - bottom)) {
+                    overflowHight = yCoord + avgHeight / 2 - height + bottom + 10;
+                }
+
+                group.append('rect')
+                        .attr('x', xCoord - avgWidth)
+                        .attr('y', yCoord - avgHeight / 2)
+                        .attr('width', avgWidth)
+                        .attr('height', avgHeight - overflowHight)
+                        .attr('fill', rectColors[index % rectColors.length])
+            })
+        })    
+
+        filterArr.forEach(item => {
+            const xCoord = transform.applyX(this.xScale(item.timeStamp));
+            item.metricList.forEach(mtr => {
+                let yCoord = transform.applyY(this.yScale(+mtr.hei));
+                let index = (+mtr.vh) | 0;
+                index = index > windPaths.length ? windPaths.length - 1 : index;
+
+                group.append('path')
+                        .attr('transform', `
+                            translate(${xCoord - pathsCenter[index].x}, ${yCoord + pathsCenter[index].y / 2}) 
+                            scale(${scaleW}, ${scaleW}) 
+                            rotate(${+mtr.dir})`
+                            )
+                        .attr('d', windPaths[index])
+                        .attr('fill', colors[index * 4 + 20])
+            })
         })
     }
 
@@ -218,7 +262,7 @@ export class WindProfileSvg {
         }
 
         const zoom = d3.zoom()
-          .scaleExtent([1, 40])
+          .scaleExtent([1, 10])
           .translateExtent([[0, 0], [width, height]])
           .filter(filter)
           .on("zoom", zoomed);

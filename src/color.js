@@ -256,3 +256,5 @@ export const colors = [
     "#fc34a2",
     "#fc34a2"
 ]
+
+export const rectColors = ['#FFF', '#C7FFC7', '#94FF93', '#5DFF5D', '#26FF26', '#0CF219', '#43BB86', '#7A84F4', '#9780E7', '#B180CD', '#CD80B1', '#E78097', '#FF8080']

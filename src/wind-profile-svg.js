@@ -120,7 +120,7 @@ export class WindProfileSvg {
      * 格式化时间
      */
      timeFormat (timeStamp, index) {
-        const formatString = index === 0 ? 'YYYY-MM-DD HH:mm' : 'HH:mm';
+        const formatString = index === -1 ? 'YYYY-MM-DD HH:mm' : 'HH:mm';
         return moment(timeStamp).format(formatString)
     }
 
@@ -175,7 +175,6 @@ export class WindProfileSvg {
         let scaleH = avgHeight / 30;
         scaleW = scaleW > 1 ? 1 : scaleW;
         scaleH = scaleH > 1 ? 1 : scaleH;
-        console.log('scale ==>', scaleW, scaleH);
 
         let overflowHight = 0;
         filterArr.forEach(item => {
@@ -231,7 +230,7 @@ export class WindProfileSvg {
         const gX = svg.append("g")
             .attr("class", "axis axis--x")
             .attr("transform", `translate(${right}, ${height - top})`)
-            .call(this.xAxis.bind(this));
+            .call(this.xAxis.bind(this))
 
         const gY = svg.append("g")
             .attr("class", "axis axis--y")
@@ -245,10 +244,24 @@ export class WindProfileSvg {
             .call(g => g.selectAll(".tick text")
             .attr("x", 4)
             .attr("dy", -4));
+
+        const timeX = svg.append("g")
+            .attr("class", "time")
+            .attr("transform", `translate(${0}, ${height - bottom + 10})`)
+            .append("text")
+            .call(text => {
+                text.node().innerHTML = moment(this.invertXScale(0)).format('YYYY-MM-DD');
+                text.attr("fill", "currentColor")
+                text.attr("y", "9")
+                text.attr("dy", "0.71em")
+                text.attr("font-size", "10")
+                text.attr("font-family", "sans-serif")
+            })
       
         const zoomed = ({ transform }) => {
           window.transform = transform
-          gX.call(this.xAxis.scale(transform.rescaleX(this.xScale)));
+          gX.call(this.xAxis.scale(transform.rescaleX(this.xScale)))
+          
           gY.call(this.yAxis.scale(transform.rescaleY(this.yScale)))
             .call(g => g.select(".domain")
             .remove())
@@ -259,6 +272,9 @@ export class WindProfileSvg {
             .attr("x", 4)
             .attr("dy", -4));;
       
+          timeX.call(text => {
+            text.node().innerHTML = moment(this.invertXScale(0)).format('YYYY-MM-DD');
+          })
           this._drawWind(svg, data, transform);
         }
 

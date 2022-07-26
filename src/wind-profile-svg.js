@@ -187,6 +187,8 @@ export class WindProfileSvg {
                 
                 if (idx === 0 && (yCoord + avgHeight / 2 > height - bottom)) {
                     overflowHight = yCoord + avgHeight / 2 - height + bottom + 10;
+                } else {
+                    overflowHight = 0
                 }
 
                 group.append('rect')
@@ -204,10 +206,10 @@ export class WindProfileSvg {
                 let yCoord = transform.applyY(this.yScale(+mtr.hei));
                 let index = (+mtr.vh) | 0;
                 index = index > windPaths.length ? windPaths.length - 1 : index;
-
+                //  translate(${xCoord - pathsCenter[index].x}, ${yCoord + pathsCenter[index].y / 2})
                 group.append('path')
                         .attr('transform', `
-                            translate(${xCoord - pathsCenter[index].x}, ${yCoord + pathsCenter[index].y / 2}) 
+                            translate(${xCoord - avgWidth / 2}, ${yCoord + pathsCenter[index].y / 2})
                             scale(${scaleW}, ${scaleW}) 
                             rotate(${+mtr.dir})`
                             )
@@ -218,7 +220,6 @@ export class WindProfileSvg {
     }
 
     createSvg () {
-        // const { top, right, bottom, left } = this.bboxFromData;
         const { width, height, top, right, bottom, left } = this.bboxFromWindow;
       
         // svg DOM  

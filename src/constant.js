@@ -42,3 +42,17 @@ export const pathsCenter = [
     { x: 4.5, y: 15},
     { x: 4.5, y: 15}
 ]
+
+export const windRange = [[-100, 0], [0, 1], [1, 2], [2, 5],
+[5, 6], [6, 8], [8, 10],
+[10, 12], [12, 14], [14, 16], [16, 18], [18, 20], [20, 24], [24, 28], [28, 30],
+[30, 36], [36, 40], [40, 60], [60, 100]]
+
+export const defaultOption = {
+    // backgourndColor: 'white',
+    // fontSize: 12,
+    // color: 'black'
+    backgourndColor: '#0b1f21',
+    fontSize: 12,
+    color: 'white'
+}

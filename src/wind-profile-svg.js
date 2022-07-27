@@ -2,8 +2,9 @@ import * as d3 from 'd3';
 import debounce from 'lodash.debounce';
 import * as moment from 'moment';
 import { data } from './data';
-import { colors, rectColors } from './color';
-import { windPaths, pathsCenter } from './constant';
+import { rectColors, windColors } from './color';
+import { windPaths, pathsCenter, defaultOption } from './constant';
+import { getColorCardLegendDom, getWindLegendDom } from './colorCard';
 
 export class WindProfileSvg {
     bboxFromData = null; // 数据边界
@@ -81,8 +82,8 @@ export class WindProfileSvg {
 
         this.yAxis = d3.axisRight(this.yScale)
             .ticks(10)
-            .tickSize(width)
-            .tickPadding(- width)
+            .tickSize(width - right)
+            .tickPadding(-width)
     }
     /**
      * 宽度像素 映射 数据
@@ -136,17 +137,15 @@ export class WindProfileSvg {
             document.querySelector('svg .data--area').remove();
         }
         const group = svg.append('g')
-            .attr("transform", `translate(${right}, ${top})`)
+            .attr("transform", `translate(${left}, ${top})`)
             .attr('class', 'data--area');
         
         const { xMinVal, xMaxVal, yMinVal, yMaxVal } = boxArea;
     
         const xMinPiexl = this.xScale(xMinVal);
         const xMaxPiexl = this.xScale(xMaxVal);
-        // 
-        const delta = xMaxPiexl - xMinPiexl
-        // scale
-        // const scale = delta / width * transform.k / 1.5;
+
+        const delta = xMaxPiexl - xMinPiexl;
 
         const filterArr = [];
         let maxHeight = -1;
@@ -184,17 +183,20 @@ export class WindProfileSvg {
                 let index = (+mtr.vh) | 0;
                 index = index > windPaths.length ? windPaths.length - 1 : index;
                 
-                if (idx === 0 && (yCoord + avgHeight / 2 > height - bottom)) {
-                    overflowHight = yCoord + avgHeight / 2 - height + bottom + 10;
+                if (idx === 0 && (yCoord + avgHeight / 2 > (height - bottom - top))) {
+                    overflowHight = yCoord + avgHeight / 2 - height + bottom + top;
+                    overflowHight = avgHeight - overflowHight;
+                } else if (idx === item.metricList.length - 1 && (yCoord - avgHeight / 2 < top)) {
+                    overflowHight = avgHeight
                 } else {
-                    overflowHight = 0
+                    overflowHight = avgHeight
                 }
 
                 group.append('rect')
                         .attr('x', xCoord - avgWidth)
                         .attr('y', yCoord - avgHeight / 2)
                         .attr('width', avgWidth)
-                        .attr('height', avgHeight - overflowHight)
+                        .attr('height', overflowHight)
                         .attr('fill', rectColors[index % rectColors.length])
             })
         })    
@@ -210,10 +212,10 @@ export class WindProfileSvg {
                         .attr('transform', `
                             translate(${xCoord - avgWidth / 2}, ${yCoord + pathsCenter[index].y / 2})
                             scale(${scaleW}, ${scaleW}) 
-                            rotate(${+mtr.dir})`
+                            rotate(${(+mtr.dir)})`
                             )
                         .attr('d', windPaths[index])
-                        .attr('fill', colors[index * 4 + 20])
+                        .attr('fill', windColors[index | 0])
             })
         })
     }
@@ -226,15 +228,28 @@ export class WindProfileSvg {
              .attr("viewBox", [0, 0, width, height])
              .attr("width", width)
              .attr("height", height)
+             .style('background', defaultOption.backgourndColor);
+
+        const container = d3.create("div")
+             .style('width', width + 'px')
+             .style('height', height + 'px')
+             .style('position', 'relative')
+
+        container.node().append(svg.node());
+
       
         const gX = svg.append("g")
             .attr("class", "axis axis--x")
-            .attr("transform", `translate(${right}, ${height - top})`)
+            .attr("transform", `translate(${left}, ${height - bottom})`)
+            .style("font-size", defaultOption.fontSize + 'px')
+            .style("color", defaultOption.color)
             .call(this.xAxis.bind(this))
 
         const gY = svg.append("g")
             .attr("class", "axis axis--y")
             .attr("transform", `translate(0, ${top})`)
+            .style("font-size", defaultOption.fontSize + 'px')
+            .style("color", defaultOption.color)
             .call(this.yAxis.bind(this))
             .call(g => g.select(".domain")
             .remove())
@@ -242,21 +257,26 @@ export class WindProfileSvg {
                 .attr("stroke-opacity", 0.5)
                 .attr("stroke-dasharray", "2,2"))
             .call(g => g.selectAll(".tick text")
-            .attr("x", 4)
+            .attr("x", 10)
             .attr("dy", -4));
 
-        const timeX = svg.append("g")
-            .attr("class", "time")
-            .attr("transform", `translate(${0}, ${height - bottom + 10})`)
-            .append("text")
-            .call(text => {
-                text.node().innerHTML = moment(this.invertXScale(0)).format('YYYY-MM-DD');
-                text.attr("fill", "currentColor")
-                text.attr("y", "9")
-                text.attr("dy", "0.71em")
-                text.attr("font-size", "10")
-                text.attr("font-family", "sans-serif")
-            })
+        // 生成色卡
+
+        const colorCardLegend = getColorCardLegendDom(rectColors, 11)
+        d3.select(colorCardLegend)
+            .style('position', 'absolute')
+            .style('right', 0 + 'px')
+            .style('bottom', bottom - 10 + 'px')
+        container.node().append(colorCardLegend)
+
+        const windLegend = getWindLegendDom(windColors);
+        d3.select(windLegend)
+            .style('position', 'absolute')
+            .style('right', 0 + 'px')
+            .style('top', top + 'px')
+        container.node().append(windLegend)
+
+        
       
         const zoomed = ({ transform }) => {
           window.transform = transform
@@ -269,12 +289,9 @@ export class WindProfileSvg {
                 .attr("stroke-opacity", 0.5)
                 .attr("stroke-dasharray", "2,2"))
             .call(g => g.selectAll(".tick text")
-            .attr("x", 4)
+            .attr("x", 10)
             .attr("dy", -4));;
       
-          timeX.call(text => {
-            text.node().innerHTML = moment(this.invertXScale(0)).format('YYYY-MM-DD');
-          })
           this._drawWind(svg, data, transform);
         }
 
@@ -298,6 +315,6 @@ export class WindProfileSvg {
         
         this.drawWind(svg, data, d3.zoomIdentity);
         Object.assign(svg.call(zoom).node(), {reset})
-        this.svgDom = svg.node();
+        this.svgDom = container.node();
       }
 }

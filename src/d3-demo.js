@@ -3,7 +3,7 @@ import { path } from 'd3';
 import debounce from 'lodash.debounce';
 import * as moment from 'moment';
 import { data } from './data';
-import { colors } from './color';
+import { windColors } from './color';
 window.data = data;
 
 const windPaths = [
@@ -97,7 +97,7 @@ function drawArc(svg, data, boxArea, transform, x, y, width, height) {
                                     rotate(${+mtr.dir})`
                                    )
                              .attr('d', windPaths[index] )
-                             .attr('fill', colors[index * 3 + 40])
+                             .attr('fill', windColors[index * 3 + 40])
                     }
                 })
             }

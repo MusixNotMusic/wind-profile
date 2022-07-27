@@ -151,7 +151,7 @@ export class WindProfileSvg {
         let maxHeight = -1;
         data.forEach(item => {
             if (item.timeStamp <= xMaxVal && item.timeStamp >= xMinVal) {
-                const obj = { timeStamp: item.timeStamp }
+                const obj = { timeStamp: item.timeStamp, groundTime: item.groundTime }
                 const metrics = [];
                 if (item.metricList && item.metricList.length > 0) {
                     item.metricList.forEach(mtr => {
@@ -198,6 +198,9 @@ export class WindProfileSvg {
                         .attr('width', avgWidth)
                         .attr('height', overflowHight)
                         .attr('fill', rectColors[index % rectColors.length])
+                        .on('click', () => {
+                            console.log('mtr ==>', mtr, item.groundTime)
+                        })
             })
         })    
 
@@ -216,6 +219,9 @@ export class WindProfileSvg {
                             )
                         .attr('d', windPaths[index])
                         .attr('fill', windColors[index | 0])
+                        // .on('click', () => {
+                        //     console.log('mtr ==>', mtr)
+                        // })
             })
         })
     }
@@ -228,7 +234,8 @@ export class WindProfileSvg {
              .attr("viewBox", [0, 0, width, height])
              .attr("width", width)
              .attr("height", height)
-             .style('background', defaultOption.backgourndColor);
+             .style('background', defaultOption.backgourndColor)
+             .on('mousemove', (event) => { console.log('mousemove', event, event.offsetX, event.offsetY)});
 
         const container = d3.create("div")
              .style('width', width + 'px')

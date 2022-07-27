@@ -21,6 +21,8 @@ export class WindProfileSvg {
         this.createAxis();
         // 创建 svg
         this.createSvg();
+
+        window.wind = this;
     }
     /**
      * 计算数据真实 数值范围
@@ -235,7 +237,10 @@ export class WindProfileSvg {
              .attr("width", width)
              .attr("height", height)
              .style('background', defaultOption.backgourndColor)
-             .on('mousemove', (event) => { console.log('mousemove', event, event.offsetX, event.offsetY)});
+             .on('mousemove', (event) => { 
+                console.log('mousemove', event, event.offsetX, event.offsetY)
+                this.tooltipPickUp(event.offsetX, event.offsetY)
+            });
 
         const container = d3.create("div")
              .style('width', width + 'px')
@@ -323,5 +328,16 @@ export class WindProfileSvg {
         this.drawWind(svg, data, d3.zoomIdentity);
         Object.assign(svg.call(zoom).node(), {reset})
         this.svgDom = container.node();
-      }
+    }
+
+    tooltipPickUp (offsetX, offsetY) {
+        const { width, height, top, right, left, bottom } = this.bboxFromWindow;
+        const x = offsetX - left;
+        const y = offsetY - top;
+        if (x < width - left - right && y < height - top - bottom) {
+            console.log('apply x y ==>',
+            moment(this.widthPiexlToColDataVal(x, d3.zoomIdentity)).format('YYYY-MM-DD HH:mm:ss'), 
+            this.heightPiexlToRowDataVal(y, d3.zoomIdentity));
+        }
+    }
 }

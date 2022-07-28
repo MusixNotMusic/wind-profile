@@ -48,11 +48,16 @@ export const windRange = [[-100, 0], [0, 1], [1, 2], [2, 5],
 [10, 12], [12, 14], [14, 16], [16, 18], [18, 20], [20, 24], [24, 28], [28, 30],
 [30, 36], [36, 40], [40, 60], [60, 100]]
 
-export const defaultOption = {
+export const config = {
     // backgourndColor: 'white',
     // fontSize: 12,
     // color: 'black'
     backgourndColor: '#0b1f21',
     fontSize: 12,
-    color: 'white'
+    color: 'white',
+    tooltip: {
+        fontSize: 12,
+        color: 'white',
+        background: 'rgba(0, 0, 0, 0.8)'
+    }
 }

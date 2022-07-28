@@ -1,4 +1,4 @@
-import { windRange, windPaths, defaultOption } from './constant';
+import { windRange, windPaths, config } from './constant';
 
 /**
  * 设置是否叠加，叠加的类型
@@ -48,7 +48,7 @@ export function getWindLegendDom (colors) {
     const path = [iconsPath[0], iconsPath[5], iconsPath[12], iconsPath[15]];
     // dom
     const parser = new window.DOMParser();
-    const chartColorStyle = `width: 70px; height: 100%; display: flex; flex-direction: column; font-size: ${defaultOption.fontSize}px; color: ${defaultOption.color}`;
+    const chartColorStyle = `width: 70px; height: 100%; display: flex; flex-direction: column; font-size: ${config.fontSize}px; color: ${config.color}`;
     const iconBarStyle = ` display: flex; flex-direction: column; height: 133px; width: 100%;`;
     const svgContainerStyle = `height: 20px; display: flex; align-items: center; margin: 0px; margin-left: 12px;`;
     const svgStyle = `transform: rotate(90deg);`;
@@ -83,7 +83,7 @@ export function getWindLegendDom (colors) {
  */
 function generateDom (linearGradientStyle, colorToValueArr, unit) {
     const parser = new window.DOMParser();
-    const chartColorStyle = `width: 70px; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; font-size: ${defaultOption.fontSize}px; color: ${defaultOption.color}`;
+    const chartColorStyle = `width: 70px; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; font-size: ${config.fontSize}px; color: ${config.color}`;
     const unitStyle = 'height: 20px; text-align: left;';
     const colorListStyle = 'height: 328px; margin-bottom: 10px; display: flex; align-items: center;';
     const colorBarStyle = 'width: 24px; height: 100%;';

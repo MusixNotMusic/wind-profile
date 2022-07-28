@@ -1,20 +1,30 @@
 import * as d3 from 'd3';
 import debounce from 'lodash.debounce';
+import throttle from 'lodash.throttle';
 import * as moment from 'moment';
 import { data } from './data';
 import { rectColors, windColors } from './color';
-import { windPaths, pathsCenter, defaultOption } from './constant';
-import { getColorCardLegendDom, getWindLegendDom } from './colorCard';
+import { windPaths, pathsCenter, config } from './constant';
+import { getColorCardLegendDom, getWindLegendDom } from './colorCardLegend';
+import { Tooltip } from './tooltip';
 
 export class WindProfileSvg {
-    bboxFromData = null; // 数据边界
-    bboxFromWindow = null; // 数据窗口
+    bboxView = null; // 视图范围
+    bboxData = null; // 数据边界
+    boxModel = null; // 数据窗口
     constructor(options) {
         this._drawWind = debounce(this.drawWind.bind(this), 200);
+        this._tooltipPickUp = throttle(this.tooltipPickUp.bind(this), 30);
+        
+        this.data = data;
 
-        this.bboxFromWindow = options;
+        this.transform = d3.zoomIdentity;
+
+        this.boxModel = options;
+        // 计算 视图范围
+        this.calculateBboxView();
         // 计算 数据区间
-        this.calculateBboxFromData();
+        this.calculateBboxData();
         // 创建比例尺
         this.createScale();
         // 创建坐标轴
@@ -22,12 +32,15 @@ export class WindProfileSvg {
         // 创建 svg
         this.createSvg();
 
+        this.tooltip = new Tooltip({}, this.containerElement, this.boxModel);
+
         window.wind = this;
+        window.d3 = d3;
     }
     /**
      * 计算数据真实 数值范围
      */
-    calculateBboxFromData () {
+    calculateBboxData () {
         let maxTimeStamp = 0;
         let minTimeStamp = Infinity;
         let maxHeight = 0;
@@ -45,16 +58,24 @@ export class WindProfileSvg {
             }
         })
         console.log(minTimeStamp, maxTimeStamp, maxHeight);
-        this.bboxFromData = { maxX: maxTimeStamp, minX: minTimeStamp, minY: 0, maxY: maxHeight };
+        this.bboxData = { maxX: maxTimeStamp, minX: minTimeStamp, minY: 0, maxY: maxHeight };
     }
     
+
+    /**
+     * 计算视图 盒子范围
+     */
+    calculateBboxView () {
+        const { top, right, bottom, left, width, height } = this.boxModel;
+        this.bboxView = { minX: 0, maxX: width - right - left, minY: 0, maxY: height - bottom - top }
+    }
 
     /**
      * 创建比例尺
      */
     createScale () {
-        const { minX, maxX, minY, maxY } = this.bboxFromData;
-        const { top, right, bottom, left, width, height } = this.bboxFromWindow;
+        const { minX, maxX, minY, maxY } = this.bboxData;
+        const { top, right, bottom, left, width, height } = this.boxModel;
         this.xScale = d3.scaleLinear()
             .range([0, width - right - left])
             .domain([minX, maxX])
@@ -75,7 +96,7 @@ export class WindProfileSvg {
      * 创建 坐标轴
      */
     createAxis () {
-        const { width, height, right} = this.bboxFromWindow;
+        const { width, height, right} = this.boxModel;
         this.xAxis = d3.axisBottom(this.xScale)
             .ticks(((width + 2) / (height + 2)) * 10)
             // .tickSize(height)
@@ -106,7 +127,7 @@ export class WindProfileSvg {
     }
 
     viewBoxFilter (transform) {
-        const { top, right, bottom, left, width, height } = this.bboxFromWindow;
+        const { top, right, bottom, left, width, height } = this.boxModel;
         const xMinVal = this.widthPiexlToColDataVal(0,      transform);
         const xMaxVal = this.widthPiexlToColDataVal(width - right - left,  transform);
         const yMinVal = this.heightPiexlToRowDataVal(height - top - bottom,      transform);
@@ -129,7 +150,7 @@ export class WindProfileSvg {
 
 
     drawWind(svg, data, transform) {
-        const { width, height, top, right, left, bottom } = this.bboxFromWindow;
+        const { width, height, top, right, left, bottom } = this.boxModel;
 
         const boxArea = this.viewBoxFilter(transform);
         
@@ -182,7 +203,7 @@ export class WindProfileSvg {
             const xCoord = transform.applyX(this.xScale(item.timeStamp));
             item.metricList.forEach((mtr, idx)=> {
                 let yCoord = transform.applyY(this.yScale(+mtr.hei));
-                let index = (+mtr.vh) | 0;
+                let index = (+mtr.cn2 * 1e10) | 0;
                 index = index > windPaths.length ? windPaths.length - 1 : index;
                 
                 if (idx === 0 && (yCoord + avgHeight / 2 > (height - bottom - top))) {
@@ -195,7 +216,7 @@ export class WindProfileSvg {
                 }
 
                 group.append('rect')
-                        .attr('x', xCoord - avgWidth)
+                        .attr('x', xCoord - avgWidth / 2)
                         .attr('y', yCoord - avgHeight / 2)
                         .attr('width', avgWidth)
                         .attr('height', overflowHight)
@@ -221,28 +242,26 @@ export class WindProfileSvg {
                             )
                         .attr('d', windPaths[index])
                         .attr('fill', windColors[index | 0])
-                        // .on('click', () => {
-                        //     console.log('mtr ==>', mtr)
-                        // })
             })
         })
     }
 
     createSvg () {
-        const { width, height, top, right, bottom, left } = this.bboxFromWindow;
+        const { width, height, top, right, bottom, left } = this.boxModel;
       
         // svg DOM  
         const svg = d3.create("svg")
              .attr("viewBox", [0, 0, width, height])
              .attr("width", width)
              .attr("height", height)
-             .style('background', defaultOption.backgourndColor)
+             .style('background', config.backgourndColor)
              .on('mousemove', (event) => { 
-                console.log('mousemove', event, event.offsetX, event.offsetY)
-                this.tooltipPickUp(event.offsetX, event.offsetY)
+                // console.log('mousemove', event, event.offsetX, event.offsetY)
+                this._tooltipPickUp(event.offsetX, event.offsetY)
             });
 
         const container = d3.create("div")
+             .attr('id', 'w-p-container')
              .style('width', width + 'px')
              .style('height', height + 'px')
              .style('position', 'relative')
@@ -253,15 +272,15 @@ export class WindProfileSvg {
         const gX = svg.append("g")
             .attr("class", "axis axis--x")
             .attr("transform", `translate(${left}, ${height - bottom})`)
-            .style("font-size", defaultOption.fontSize + 'px')
-            .style("color", defaultOption.color)
+            .style("font-size", config.fontSize + 'px')
+            .style("color", config.color)
             .call(this.xAxis.bind(this))
 
         const gY = svg.append("g")
             .attr("class", "axis axis--y")
             .attr("transform", `translate(0, ${top})`)
-            .style("font-size", defaultOption.fontSize + 'px')
-            .style("color", defaultOption.color)
+            .style("font-size", config.fontSize + 'px')
+            .style("color", config.color)
             .call(this.yAxis.bind(this))
             .call(g => g.select(".domain")
             .remove())
@@ -291,7 +310,7 @@ export class WindProfileSvg {
         
       
         const zoomed = ({ transform }) => {
-          window.transform = transform
+          this.transform = transform;
           gX.call(this.xAxis.scale(transform.rescaleX(this.xScale)))
           
           gY.call(this.yAxis.scale(transform.rescaleY(this.yScale)))
@@ -309,9 +328,12 @@ export class WindProfileSvg {
 
         const zoom = d3.zoom()
           .scaleExtent([1, 10])
-          .translateExtent([[0, 0], [width, height]])
+        //   .translateExtent([[0, 0], [width, height]])
+          .translateExtent([[right, top], [width - left, height - bottom]])
           .filter(filter)
           .on("zoom", zoomed);
+
+        window.zoom = zoom;
       
         function reset() {
           svg.transition()
@@ -327,17 +349,61 @@ export class WindProfileSvg {
         
         this.drawWind(svg, data, d3.zoomIdentity);
         Object.assign(svg.call(zoom).node(), {reset})
-        this.svgDom = container.node();
+        this.containerElement = container.node();
     }
 
+    /**
+     * 
+     * @param {*} offsetX 
+     * @param {*} offsetY 
+     */
     tooltipPickUp (offsetX, offsetY) {
-        const { width, height, top, right, left, bottom } = this.bboxFromWindow;
+        const { width, height, top, right, left, bottom } = this.boxModel;
         const x = offsetX - left;
         const y = offsetY - top;
-        if (x < width - left - right && y < height - top - bottom) {
-            console.log('apply x y ==>',
-            moment(this.widthPiexlToColDataVal(x, d3.zoomIdentity)).format('YYYY-MM-DD HH:mm:ss'), 
-            this.heightPiexlToRowDataVal(y, d3.zoomIdentity));
+        if (top <= offsetY && offsetY <= height - bottom && offsetX >= left && offsetX <= width - right) {
+            const timeStamp = this.widthPiexlToColDataVal(x, this.transform);
+            const height = this.heightPiexlToRowDataVal(y, this.transform);
+            
+            let result = {};
+            let pickUpX = -1, pickUpY = -1;
+            let deltaTime = Infinity;    
+            for(let i = 0; i < this.data.length; i++){
+                const absDiff = Math.abs(this.data[i].timeStamp - timeStamp);
+                if (absDiff < deltaTime) {
+                    deltaTime = this.data[i].timeStamp - timeStamp;
+                    pickUpX = i;
+                }
+            }
+
+            const metricList = this.data[pickUpX].metricList || [];
+            for(let k = 0; k < metricList.length; k++) {
+                if (+metricList[k].hei < height) {
+                    let delta1 = Math.abs(height - (+metricList[k].hei));
+                    let delta2 = Math.abs(height - (+metricList[k + 1] ? +metricList[k + 1].hei : 0));
+                    pickUpY = delta1 < delta2 ? k : k + 1;
+                }
+            }
+            if (metricList.length > 0) {
+                const groundTime = moment(this.data[pickUpX].timeStamp).format('YYYY-MM-DD HH:mm:ss');
+                result = Object.assign(result, metricList[pickUpY]) 
+
+                const { hei, vv, vh, cn2, dir, chop } = metricList[pickUpY];
+                let options = [
+                { name: '时间:', value: groundTime, unit: '' },
+                { name: '高度:', value: hei, unit: 'm' },
+                { name: '风向:', value: dir, unit: '°' },
+                { name: '风速',  value: cn2, unit: 'm/s' },
+                { name: '垂直风速', value: chop, unit: 'm/s' },
+                { name: 'CN²', value: cn2, unit: '' },
+                { name: '风切变', value: chop, unit: 'l/s' }
+                ]
+                this.tooltip.updateElement(options, offsetX, offsetY);
+            } else {
+                this.tooltip.removeElement();
+            }
+        } else {
+            this.tooltip.removeElement();
         }
     }
 }

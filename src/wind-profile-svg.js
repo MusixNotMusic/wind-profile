@@ -221,9 +221,6 @@ export class WindProfileSvg {
                         .attr('width', avgWidth)
                         .attr('height', overflowHight)
                         .attr('fill', rectColors[index % rectColors.length])
-                        .on('click', () => {
-                            console.log('mtr ==>', mtr, item.groundTime)
-                        })
             })
         })    
 
@@ -328,8 +325,8 @@ export class WindProfileSvg {
 
         const zoom = d3.zoom()
           .scaleExtent([1, 10])
-        //   .translateExtent([[0, 0], [width, height]])
-          .translateExtent([[right, top], [width - left, height - bottom]])
+          .translateExtent([[0, 0], [width, height]])
+        //   .translateExtent([[right, top], [width - left, height - bottom]])
           .filter(filter)
           .on("zoom", zoomed);
 
@@ -365,7 +362,6 @@ export class WindProfileSvg {
             const timeStamp = this.widthPiexlToColDataVal(x, this.transform);
             const height = this.heightPiexlToRowDataVal(y, this.transform);
             
-            let result = {};
             let pickUpX = -1, pickUpY = -1;
             let deltaTime = Infinity;    
             for(let i = 0; i < this.data.length; i++){
@@ -378,25 +374,24 @@ export class WindProfileSvg {
 
             const metricList = this.data[pickUpX].metricList || [];
             for(let k = 0; k < metricList.length; k++) {
-                if (+metricList[k].hei < height) {
+                if (+metricList[k].hei < height && height <= +metricList[metricList.length -1].hei) {
                     let delta1 = Math.abs(height - (+metricList[k].hei));
                     let delta2 = Math.abs(height - (+metricList[k + 1] ? +metricList[k + 1].hei : 0));
                     pickUpY = delta1 < delta2 ? k : k + 1;
                 }
             }
-            if (metricList.length > 0) {
+            if (metricList.length > 0 && metricList[pickUpY]) {
                 const groundTime = moment(this.data[pickUpX].timeStamp).format('YYYY-MM-DD HH:mm:ss');
-                result = Object.assign(result, metricList[pickUpY]) 
 
                 const { hei, vv, vh, cn2, dir, chop } = metricList[pickUpY];
                 let options = [
-                { name: '时间:', value: groundTime, unit: '' },
-                { name: '高度:', value: hei, unit: 'm' },
-                { name: '风向:', value: dir, unit: '°' },
-                { name: '风速',  value: cn2, unit: 'm/s' },
-                { name: '垂直风速', value: chop, unit: 'm/s' },
-                { name: 'CN²', value: cn2, unit: '' },
-                { name: '风切变', value: chop, unit: 'l/s' }
+                    { name: '时间:', value: groundTime, unit: '' },
+                    { name: '高度:', value: hei, unit: 'm' },
+                    { name: '风向:', value: dir, unit: '°' },
+                    { name: '风速',  value: vh, unit: 'm/s' },
+                    { name: '垂直风速', value: vv, unit: 'm/s' },
+                    { name: 'CN²', value: cn2, unit: '' },
+                    { name: '风切变', value: chop, unit: 'l/s' }
                 ]
                 this.tooltip.updateElement(options, offsetX, offsetY);
             } else {
@@ -405,5 +400,32 @@ export class WindProfileSvg {
         } else {
             this.tooltip.removeElement();
         }
+    }
+
+    destroy () {
+        if (this.containerElement) {
+            this.containerElement.remove();
+        }
+
+        if (this.tooltip) {
+            this.tooltip.destroy();
+        }
+        
+        this._drawWind.cancel();
+        this._tooltipPickUp.cancel();
+
+        this.data = null;
+
+        this.transform = null;
+
+        this.bboxData = null;
+        this.bboxView = null;
+        this.boxModel = null;
+        this.xScale = null;
+        this.yScale = null;
+        this.invertXScale = null;
+        this.invertYScale = null;
+        this.xAxis = null;
+        this.yAxis = null;
     }
 }

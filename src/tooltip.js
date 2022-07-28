@@ -7,8 +7,6 @@ export class Tooltip {
         this.bbox = bbox;
         this.options = options;
         this.parentNode = parentNode;
-        this.vue = null;
-        this.show = false;
         window.tooltip = this;
     }
 
@@ -60,5 +58,12 @@ export class Tooltip {
     updateElement (options, offsetX, offsetY) {
         this.options = options;
         this.createElemet(offsetX, offsetY);
+    }
+
+    destroy () {
+        this.removeElement();
+        this.bbox = null;
+        this.options = null;
+        this.parentNode = null;
     }
 }

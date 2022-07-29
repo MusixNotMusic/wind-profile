@@ -20,7 +20,7 @@ document.querySelector('#app').append(windProfileSvg.containerElement);
 
 ```json
 [{
-        "station": "石龙火场",
+        "station": "xxxx",
         "stationId": "YW0001",
         "time": "20210520175420",
         "gv": "0.00",
@@ -65,7 +65,7 @@ document.querySelector('#app').append(windProfileSvg.containerElement);
 | overlay | boolean | false | 是否叠加cn2、风切变 |--| 
 | overlayType | number | 11 | 叠加产品的类型 （0 风羽图，1 垂直气流， 2 CN2, 11 风切变） |--| 
 | windValueFunction | function | undefined | 回调函数映射风羽图风矢图Path路径对应索引 | (item)=> { return +item.vh | 0; }|
-| windValueFunction | function | undefined | 回调函数映射cn2、风切变色卡对应索引 | (item)=> { return +item.cn2 * 1e10 | 0; }|
+| windValueFunction | function | undefined | 回调函数映射cn2、风切变色卡对应索引 | (item)=> { return +item.cn2 * 1e10 | 0;}|
 | altitudeListLabel | string | metricList | 对应数据中metricList字段，可根据自定义数据结构修改 |--| 
 | altitudeLabel | string | hei | 对应数据中metricList数组内hei字段，可根据自定义数据结构修改 |--| 
 | timeStampLabel | string | timeStamp | 对应数据中timeStamp字段，可根据自定义数据结构修改 |--|

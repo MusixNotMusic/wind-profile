@@ -2,7 +2,7 @@ import * as d3 from 'd3';
 import debounce from 'lodash.debounce';
 import throttle from 'lodash.throttle';
 import defaultsDeep from 'lodash.defaultsdeep';
-import * as moment from 'moment';
+import moment from 'moment';
 import { rectColors, windColors } from './color';
 import { windPaths, pathsCenter, styleConfig } from './constant';
 import { getColorCardLegendDom, getWindLegendDom } from './Legend';
@@ -21,7 +21,7 @@ export class WindProfileSvg {
         // options
         this.overlay = options.overlay || false;
 
-        this.overlayType = options.overlayType || '11';
+        this.overlayType = options.overlayType || 11;
 
         this.windValueFunction = options.windValueFunction;
         
@@ -72,6 +72,8 @@ export class WindProfileSvg {
         this.drawMainView();
 
         this.tooltip = new Tooltip({}, this.containerElement, this.boxModel);
+
+        this.setTooltipShow(this.tooltipShow);
 
         window.wind = this;
     }

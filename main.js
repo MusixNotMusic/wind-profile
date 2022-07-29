@@ -1,7 +1,6 @@
 import './style.css'
-import { WindProfileSvg } from './src/WindProfileSvg'
-import { data } from './src/data';
-const options = { overlay: true, tooltip: { show: false } };
+import { WindProfileSvg, defaultOptions, data } from 'wind-profile'
+const options = { overlay: true, tooltip: { show: true } };
 const boxModel = { width: 1200, height: 600, margin: {
     top: 30, 
     left: 60, 

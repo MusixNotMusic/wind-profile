@@ -16,6 +16,6 @@
     "lodash.defaultsdeep": "^4.6.1",
     "lodash.throttle": "^4.1.1",
     "moment": "^2.29.4",
-    "wind-profile": "0.0.3"
+    "wind-profile": "0.0.4"
   }
 }

@@ -1,7 +1,6 @@
 {
   "name": "wind-profile",
-  "private": true,
-  "version": "0.0.0",
+  "version": "0.0.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -16,6 +15,7 @@
     "lodash.debounce": "^4.0.8",
     "lodash.defaultsdeep": "^4.6.1",
     "lodash.throttle": "^4.1.1",
-    "moment": "^2.29.4"
+    "moment": "^2.29.4",
+    "wind-profile": "^0.0.1"
   }
 }

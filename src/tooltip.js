@@ -1,6 +1,5 @@
-import Vue from 'vue';
-import { config } from './constant';
-// import debounce from 'lodash.debounce';
+import { styleConfig } from './constant';
+
 export class Tooltip {
     constructor (options, parentNode, bbox) {
         this.id = 'w-p-tooltip-' + Date.now(); 
@@ -17,7 +16,7 @@ export class Tooltip {
         offsetX += _offsetX;
         offsetY += _offsetY;
 
-        const tooltipStyle = `position: absolute; top: ${offsetY}px; left: ${offsetX}px; min-width: 150px; padding: 10px; border-radius:3px; font-size: ${config.tooltip.fontSize}px; color: ${config.tooltip.color}; background: ${config.tooltip.background}; pointer-events: none;`
+        const tooltipStyle = `position: absolute; top: ${offsetY}px; left: ${offsetX}px; min-width: 150px; padding: 10px; border-radius:3px; font-size: ${styleConfig.tooltip.fontSize}px; color: ${styleConfig.tooltip.color}; background: ${styleConfig.tooltip.background}; pointer-events: none;`
         const itemStyle = `display: flex; justify-content: space-between; align-items: center;`
         const htmlTemplate = `
             <div id="${this.id}" style="${tooltipStyle}">

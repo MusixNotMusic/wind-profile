@@ -58,3 +58,5 @@ export const styleConfig = {
         background: 'rgba(0, 0, 0, 0.8)'
     }
 }
+
+export const defaultOptions = { overlay: true, tooltip: { show: false } };

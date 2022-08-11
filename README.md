@@ -2,9 +2,21 @@
 
 ## 1. 使用方式
 ```js
-import { WindProfileSvg } from './src/WindProfileSvg'
-import { data } from './src/data';
-const options = { overlay: true, tooltip: { show: false } };
+import { WindProfileSvg, demoData } from 'WindProfileSvg'
+const options = { 
+    overlay: true, 
+    tooltip: { show: true }, 
+    styleConfig: 
+    { 
+        backgroundColor: '#fff', 
+        color: '#000',
+        tooltip: {
+            fontSize: 14,
+            color: 'orange',
+            background: 'rgba(0, 0, 0, 0.8)'
+        }
+    } 
+};
 const boxModel = { width: 1200, height: 600, margin: {
     top: 30, 
     left: 60, 
@@ -12,7 +24,7 @@ const boxModel = { width: 1200, height: 600, margin: {
     right: 80
 } };
 
-const windProfileSvg = new WindProfileSvg(data, options, boxModel);
+const windProfileSvg = new WindProfileSvg(demoData, options, boxModel);
 document.querySelector('#app').append(windProfileSvg.containerElement);
 ```
 

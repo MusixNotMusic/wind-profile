@@ -15,7 +15,7 @@ export class Tooltip {
         offsetX += _offsetX;
         offsetY += _offsetY;
 
-        const tooltipStyle = `position: absolute; top: ${offsetY}px; left: ${offsetX}px; min-width: 150px; padding: 10px; border-radius:3px; font-size: ${this.styleConfig.tooltip.fontSize}px; color: ${this.styleConfig.tooltip.color}; background: ${this.styleConfig.tooltip.background}; pointer-events: none;`
+        const tooltipStyle = `position: absolute; top: ${offsetY}px; left: ${offsetX}px; min-width: 180px; padding: 10px; border-radius:3px; font-size: ${this.styleConfig.tooltip.fontSize}px; color: ${this.styleConfig.tooltip.color}; background: ${this.styleConfig.tooltip.background}; pointer-events: none;`
         const itemStyle = `display: flex; justify-content: space-between; align-items: center;`
         const htmlTemplate = `
             <div id="${this.id}" style="${tooltipStyle}">
@@ -38,11 +38,11 @@ export class Tooltip {
 
         let translateX = 0;
         let translateY = 0;
-        if (offsetX + width > (this.bbox.width - this.bbox.right)) {
+        if (offsetX + width > (this.bbox.width - this.bbox.margin.right)) {
             translateX = -width - 2 * _offsetX + 'px';
         }
 
-        if (offsetY + height > (this.bbox.height - this.bbox.bottom)) {
+        if (offsetY + height > (this.bbox.height - this.bbox.margin.bottom)) {
             translateY = -height - 2 * _offsetY + 'px';
         }
         dom.style.transform = `translate(${translateX}, ${translateY})`;

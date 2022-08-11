@@ -4,7 +4,7 @@ import { windRange, windPaths, styleConfig } from './constant';
  * 设置是否叠加，叠加的类型
  * @param type 叠加产品的类型 （0 风羽图，1 垂直气流， 2 CN2, 11 风切变）
  */
-export function getColorCardLegendDom (colors, type) {
+export function getColorCardLegendDom (colors, type, styleConfig) {
     let colorToValueArr = [];
     let unit = '';
     let linearGradientStyle;
@@ -30,14 +30,14 @@ export function getColorCardLegendDom (colors, type) {
         linearGradientStyle = getColorBarStyle(colors);
         break
     }
-    return generateDom(linearGradientStyle, colorToValueArr, unit);
+    return generateDom(linearGradientStyle, colorToValueArr, unit, styleConfig);
 }
 
 /**
  * 获取风羽图图例
  * @param {*} colors 
  */
-export function getWindLegendDom (colors) {
+export function getWindLegendDom (colors, styleConfig) {
     let colorsVal = [];
     const iconsPath = [];
     for (let len = windRange.length - 1, i = len - 1; i >= 0; i--) {
@@ -81,7 +81,7 @@ export function getWindLegendDom (colors) {
  * @param {*} unit 
  * @returns 
  */
-function generateDom (linearGradientStyle, colorToValueArr, unit) {
+function generateDom (linearGradientStyle, colorToValueArr, unit, styleConfig) {
     const parser = new window.DOMParser();
     const chartColorStyle = `width: 70px; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; font-size: ${styleConfig.fontSize}px; color: ${styleConfig.color}`;
     const unitStyle = 'height: 20px; text-align: left;';

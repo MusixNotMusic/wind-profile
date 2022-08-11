@@ -1,10 +1,9 @@
-import { styleConfig } from './constant';
-
 export class Tooltip {
-    constructor (options, parentNode, bbox) {
+    constructor (options, parentNode, bbox, styleConfig) {
         this.id = 'w-p-tooltip-' + Date.now(); 
         this.bbox = bbox;
         this.options = options;
+        this.styleConfig = styleConfig;
         this.parentNode = parentNode;
         window.tooltip = this;
     }
@@ -16,7 +15,7 @@ export class Tooltip {
         offsetX += _offsetX;
         offsetY += _offsetY;
 
-        const tooltipStyle = `position: absolute; top: ${offsetY}px; left: ${offsetX}px; min-width: 150px; padding: 10px; border-radius:3px; font-size: ${styleConfig.tooltip.fontSize}px; color: ${styleConfig.tooltip.color}; background: ${styleConfig.tooltip.background}; pointer-events: none;`
+        const tooltipStyle = `position: absolute; top: ${offsetY}px; left: ${offsetX}px; min-width: 150px; padding: 10px; border-radius:3px; font-size: ${this.styleConfig.tooltip.fontSize}px; color: ${this.styleConfig.tooltip.color}; background: ${this.styleConfig.tooltip.background}; pointer-events: none;`
         const itemStyle = `display: flex; justify-content: space-between; align-items: center;`
         const htmlTemplate = `
             <div id="${this.id}" style="${tooltipStyle}">

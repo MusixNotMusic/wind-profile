@@ -9,10 +9,11 @@ import { getColorCardLegendDom, getWindLegendDom } from './Legend';
 import { Tooltip } from './Tooltip';
 
 export class WindProfileSvg {
-    bboxView = null; // 视图范围
-    bboxData = null; // 数据边界
-    boxModel = null; // 数据窗口
     constructor(data, options, boxModel) {
+        this.bboxView = null; // 视图范围
+        this.bboxData = null; // 数据边界
+        this.boxModel = null; // 数据窗口
+
         this._drawMainView = debounce(this.drawMainView.bind(this), 200);
         this._tooltipPickUp = throttle(this.tooltipPickUp.bind(this), 30);
         
@@ -43,8 +44,8 @@ export class WindProfileSvg {
         // options path
         this.windPaths = options.path ? options.path.windPaths : windPaths;
 
-        this.styleConfig = defaultsDeep(styleConfig, options.style ? options.style.config : {});
-
+        this.styleConfig = defaultsDeep(options.styleConfig ? options.styleConfig : {}, styleConfig);
+        console.log(this.styleConfig, options.styleConfig)
         this.transform = d3.zoomIdentity;
         // 盒子模型
         this.boxModel = boxModel;
@@ -71,7 +72,7 @@ export class WindProfileSvg {
 
         this.drawMainView();
 
-        this.tooltip = new Tooltip({}, this.containerElement, this.boxModel);
+        this.tooltip = new Tooltip({}, this.containerElement, this.boxModel, this.styleConfig);
 
         this.setTooltipShow(this.tooltipShow);
 
@@ -361,7 +362,7 @@ export class WindProfileSvg {
              .attr("viewBox", [0, 0, width, height])
              .attr("width", width)
              .attr("height", height)
-             .style('background', this.styleConfig.backgourndColor);
+             .style('background', this.styleConfig.backgroundColor);
              
         this.svg = svg;
 
@@ -430,8 +431,8 @@ export class WindProfileSvg {
       this.gX = this.svg.append("g")
         .attr("class", "axis axis--x")
         .attr("transform", `translate(${left}, ${height - bottom})`)
-        .style("font-size", styleConfig.fontSize + 'px')
-        .style("color", styleConfig.color)
+        .style("font-size", this.styleConfig.fontSize + 'px')
+        .style("color", this.styleConfig.color)
         .call(this.xAxis.bind(this))
     }
 
@@ -440,8 +441,8 @@ export class WindProfileSvg {
       this.gY = this.svg.append("g")
             .attr("class", "axis axis--y")
             .attr("transform", `translate(0, ${top})`)
-            .style("font-size", styleConfig.fontSize + 'px')
-            .style("color", styleConfig.color)
+            .style("font-size", this.styleConfig.fontSize + 'px')
+            .style("color", this.styleConfig.color)
             .call(this.yAxis.bind(this))
             .call(g => g.select(".domain")
             .remove())
@@ -458,7 +459,7 @@ export class WindProfileSvg {
     drawColorCardLegend () {
         const { bottom } = this.boxModel.margin;
         
-        const colorCardLegend = getColorCardLegendDom(this.rectColors, this.overlayType);
+        const colorCardLegend = getColorCardLegendDom(this.rectColors, this.overlayType, this.styleConfig);
 
         d3.select(colorCardLegend)
             .style('position', 'absolute')
@@ -474,7 +475,7 @@ export class WindProfileSvg {
      drawWindLegend () {
         const { top } = this.boxModel.margin;
 
-        const windLegend = getWindLegendDom(this.windColors);
+        const windLegend = getWindLegendDom(this.windColors, this.styleConfig);
 
         d3.select(windLegend)
             .style('position', 'absolute')

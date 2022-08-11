@@ -80,7 +80,7 @@ document.querySelector('#app').append(windProfileSvg.containerElement);
 
 |参数名|默认值|描述|
 |:----|:----|:----:|
-|backgourndColor|#0b1f21|画布背景颜色|
+|backgroundColor|#0b1f21|画布背景颜色|
 |fontSize|12|全局字号|
 |color|white|全局字体颜色|
 |tooltip.fontSize|12| tooltip字号 |

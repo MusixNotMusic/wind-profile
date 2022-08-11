@@ -49,7 +49,7 @@ export const windRange = [[-100, 0], [0, 1], [1, 2], [2, 5],
 [30, 36], [36, 40], [40, 60], [60, 100]]
 
 export const styleConfig = {
-    backgourndColor: '#0b1f21',
+    backgroundColor: '#0b1f21',
     fontSize: 12,
     color: 'white',
     tooltip: {

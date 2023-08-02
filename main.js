@@ -1,6 +1,7 @@
 import './style.css'
 import { defaultOptions, data } from 'wind-profile'
 import { WindProfileSvg } from './src/WindProfileSvg'
+import { WindProfileCanvas } from './src/WindProfileCanvas'
 const options = { 
     overlay: true, 
     tooltip: { show: true }, 
@@ -22,5 +23,6 @@ const boxModel = { width: 1200, height: 600, margin: {
     right: 80
 } };
 
-const windProfileSvg = new WindProfileSvg(data, options, boxModel);
-document.querySelector('#app').append(windProfileSvg.containerElement);
+// const windProfileSvg = new WindProfileSvg(data, options, boxModel);
+const windProfileCanvas = new WindProfileCanvas(data, options, boxModel);
+document.querySelector('#app').append(windProfileCanvas.containerElement);

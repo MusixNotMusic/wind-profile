@@ -16,7 +16,7 @@ export class WindProfileCanvas {
 
         this._tooltipPickUp = throttle(this.tooltipPickUp.bind(this), 30);
         
-        this.data = data;
+        this.data = data.slice(200);
 
         // options
         this.overlay = options.overlay || false;
@@ -320,7 +320,7 @@ export class WindProfileCanvas {
         context.beginPath();
         xTicks.forEach((d, index) => {
             context.moveTo(xScale(d), Y);
-            context.lineTo(xScale(d), Y - tickSize);
+            context.lineTo(xScale(d), Y + tickSize);
         });
         context.stroke();
 
@@ -329,7 +329,7 @@ export class WindProfileCanvas {
         // context.lineTo(startX, Y);
         context.moveTo(startX, Y);
         context.lineTo(endX, Y);
-        context.lineTo(endX, Y - tickSize);
+        context.lineTo(endX, Y + tickSize);
         context.stroke();
 
         context.textAlign = "center";
@@ -338,8 +338,8 @@ export class WindProfileCanvas {
         xTicks.forEach(d => {
             const {date, time} = this.timeFormat(d);
             context.beginPath();
-            context.fillText(date, xScale(d), Y + tickSize);
-            context.fillText(time, xScale(d), Y + tickSize * 3);
+            context.fillText(date, xScale(d), Y + tickSize * 2);
+            context.fillText(time, xScale(d), Y + tickSize * 4);
         });
     }
     /**
@@ -364,7 +364,7 @@ export class WindProfileCanvas {
         context.beginPath();
         yTicks.forEach((d, index) => {
           context.moveTo(X, yScale(d));
-          context.lineTo(X + tickSize, yScale(d));
+          context.lineTo(X - tickSize, yScale(d));
         });
         context.stroke();
       
@@ -373,7 +373,7 @@ export class WindProfileCanvas {
         // context.lineTo(X, startY);
         context.moveTo(X, startY);
         context.lineTo(X, endY);
-        context.lineTo(X + tickSize, endY);
+        context.lineTo(X - tickSize, endY);
         context.stroke();
       
         context.textAlign = "right";

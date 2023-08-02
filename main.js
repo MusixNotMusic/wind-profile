@@ -19,7 +19,7 @@ const options = {
 const boxModel = { width: 1200, height: 600, margin: {
     top: 30, 
     left: 60, 
-    bottom: 30, 
+    bottom: 40, 
     right: 80
 } };
 

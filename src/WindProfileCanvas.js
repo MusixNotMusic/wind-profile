@@ -69,7 +69,7 @@ export class WindProfileCanvas {
 
         this.drawYAxis();
 
-        // this.drawRect(this.data);
+        this.drawRect(this.data);
 
         this.drawWindProfile(this.data);
 
@@ -242,44 +242,9 @@ export class WindProfileCanvas {
      * @param {*} filterArr 
      */
     drawWindProfile (filterArr) {
-        // const { width, height } = this.boxModel;
-        // const { top, right, left, bottom } = this.boxModel.margin;
-
-        // const transform = this.transform;
-
-        // const { minX, maxX, minY, maxY } = this.bboxView;
-
-        // let avgWidth = maxX / filterArr.length;
-        // let avgHeight = maxY / maxHeight;
-        // let scaleW = avgWidth / 9;
-        // let scaleH = avgHeight / 30;
-        // scaleW = scaleW > 1 ? 1 : scaleW;
-        // scaleH = scaleH > 1 ? 1 : scaleH;
-
-        // filterArr.forEach(item => {
-        //     const xCoord = transform.applyX(this.xScale(item[this.timeStampLabel]));
-
-        //     item[this.altitudeListLabel].forEach(mtr => {
-        //         let yCoord = transform.applyY(this.yScale(+mtr[this.altitudeLabel]));
-
-        //         let index = this.windValueFunction ? this.windValueFunction(mtr) : (mtr.vh | 0);
-
-        //         index = index > this.windPaths.length ? this.windPaths.length - 1 : index;
-                
-        //         group.append('path')
-        //                 .attr('transform', `
-        //                     translate(${xCoord - avgWidth / 2}, ${yCoord + pathsCenter[index].y / 2})
-        //                     scale(${scaleW}, ${scaleW}) 
-        //                     rotate(${(+mtr[this.directionLabel])})`
-        //                     )
-        //                 .attr('d', this.windPaths[index])
-        //                 .attr('fill', this.windColors[index | 0])
-        //     })
-        // })
-
       const ctx = this.gridCanvas.getContext('2d');
       // clip view box
-      // this.clipViewBox(ctx);
+      this.clipViewBox(ctx);
 
       console.time('drawWindProfile');
       filterArr.forEach(item => {
@@ -289,14 +254,17 @@ export class WindProfileCanvas {
               let y = this.yScale(+mtr[this.altitudeLabel]);
               let index = this.windValueFunction ? this.windValueFunction(mtr) : (mtr.vh | 0);
               index = index > this.windPaths.length ? this.windPaths.length - 1 : index;
-              // ctx.setTransform(1, 0, 0, 1, x - this.unitWidthPixel / 2, y  - this.unitHeightPixel / 2);
               const path = this.windPaths[index];
               const color = this.windColors[index | 0];
               const p = new Path2D();
-              p.addPath(new Path2D(path), new DOMMatrix().translate(x, y).rotate(+mtr[this.directionLabel]))
-              ctx.fillStyle = '#000' || color;
+              const centerX = pathsCenter[index].x;
+              const centerY = pathsCenter[index].y;
+              const scaleX = this.unitWidthPixel < centerX * 2 ? this.unitWidthPixel / centerX * 0.5 : 1;
+              const scaleY = this.unitHeightPixel < centerY * 2 ? this.unitHeightPixel / centerX * 0.5 : 1;
+              // const scaleY = this.unitHeightPixel / centerY * 0.5;
+              p.addPath(new Path2D(path), new DOMMatrix().translate(x - centerX, y -centerY).scale(scaleX, scaleY).rotate(+mtr[this.directionLabel]))
+              ctx.fillStyle = color;
               ctx.fill(p);
-              // ctx.resetTransform();
           })
       })
 
@@ -342,7 +310,7 @@ export class WindProfileCanvas {
     _drawXAxis (context, xScale, Y, xExtent) {
         const [startX, endX] = xExtent;
         let tickSize = 6,
-            xTicks = xScale.ticks(20), // You may choose tick counts. ex: xScale.ticks(20)
+            xTicks = xScale.ticks(12), // You may choose tick counts. ex: xScale.ticks(20)
             xTickFormat = this.timeFormat; // you may choose the format. ex: xScale.tickFormat(tickCount, ".0s")
 
         context.translate(0.5, 0.5);

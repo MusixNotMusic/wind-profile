@@ -5,6 +5,7 @@ import { WindProfileCanvas } from './src/WindProfileCanvas'
 const options = { 
     overlay: true, 
     tooltip: { show: true }, 
+    overlayType: 1,
     styleConfig: 
     { 
         backgroundColor: '#fff', 

@@ -313,7 +313,7 @@ export class WindProfileCanvas {
               const centerX = pathsCenter[index].x;
               const centerY = pathsCenter[index].y;
               const scaleX = this.unitWidthPixel < centerX * 2 ? this.unitWidthPixel / centerX * 0.5 : 1;
-              const scaleY = this.unitHeightPixel < centerY * 2 ? this.unitHeightPixel / centerX * 0.5 : 1;
+              const scaleY = this.unitHeightPixel < centerY * 2 ? this.unitHeightPixel / centerX * 0.5 * 0.8 : 0.5;
               // const scaleY = this.unitHeightPixel / centerY * 0.5;
               p.addPath(new Path2D(path), new DOMMatrix().translate(x - centerX, y -centerY).scale(scaleX, scaleY).rotate(+mtr[this.directionLabel]))
               ctx.fillStyle = color;
@@ -522,6 +522,7 @@ export class WindProfileCanvas {
             }
 
             const metricList = this.data[pickUpX][this.altitudeListLabel] || [];
+            console.log('metricList ==>', metricList);
             for(let k = 0; k < metricList.length; k++) {
                 if (+metricList[k][this.altitudeLabel] < height && height <= +metricList[metricList.length -1][this.altitudeLabel]) {
                     let delta1 = Math.abs(height - (+metricList[k][this.altitudeLabel]));
@@ -593,7 +594,7 @@ export class WindProfileCanvas {
       if (this.baseCanvas) {
    
         d3.select(this.baseCanvas).call(d3.zoom()
-          .scaleExtent([1/2, 8])
+          .scaleExtent([1/2, 16])
           .on("zoom", (e) => {
              console.log('addEventListener e', e.transform);
              this._zoomed(e.transform);
@@ -612,8 +613,9 @@ export class WindProfileCanvas {
             this.tooltip.destroy();
         }
         
-        this._drawMainView.cancel();
         this._tooltipPickUp.cancel();
+        this._zoomed.cancel();
+        this._drawWindProfile.cancel();
 
         this.data = null;
         this.viewData = null;

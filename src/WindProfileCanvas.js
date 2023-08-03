@@ -10,13 +10,12 @@ import { Tooltip } from './Tooltip';
 
 export class WindProfileCanvas {
     constructor(data, options, boxModel) {
-        this.bboxView = null; // 视图范围
-        this.bboxData = null; // 数据边界
-        this.boxModel = null; // 数据窗口
+        this.data = data;
 
-        this._tooltipPickUp = throttle(this.tooltipPickUp.bind(this), 30);
-        
-        this.data = data.slice(200);
+        this.calculateDataExtent(this.data);
+
+        // 试图区域的 数据
+        this.viewData = this.data;
 
         // options
         this.overlay = options.overlay || false;
@@ -26,70 +25,112 @@ export class WindProfileCanvas {
         this.windValueFunction = options.windValueFunction;
         
         this.windOverlayValueFunction = options.windOverlayValueFunction;
+
         // 高度列表数据
         this.altitudeListLabel = options.altitudeListLabel || 'metricList';
+
         // 海拔字段
         this.altitudeLabel = options.altitudeLabel || 'hei';
+
         // 时间字段 long long 整形字符串
         this.timeStampLabel = options.timeStampLabel || 'timeStamp';
+
         // 风向角度 direction 字段
         this.directionLabel = options.directionLabel || 'dir';
+
         // 是否显示 tooltip
         this.tooltipShow = options.tooltip && options.tooltip.show;
         
         // options color path 
         this.windColors = options.colors ? options.colors.windColors : windColors;
+
         this.rectColors = options.colors ? options.colors.rectColors : rectColors;
+        
         // options path
         this.windPaths = options.path ? options.path.windPaths : windPaths;
 
         this.styleConfig = defaultsDeep(options.styleConfig ? options.styleConfig : {}, styleConfig);
-        console.log(this.styleConfig, options.styleConfig)
-        this.transform = d3.zoomIdentity;
+        
+        // background canvas
+        this.baseCanvas = null;
+        
+        // 网格 canvas
+        this.gridCanvas = null;
+
+        // 风羽 canvas
+        this.profileCanvas = null;
+        
         // 盒子模型
         this.boxModel = boxModel;
-        // 计算 数据区间
-        this.calculateBboxData();
-        // 计算 视图范围
-        this.calculateBboxView();
-        // 创建比例尺
-        this.createScale();
+
         // 创建坐标轴
-        // this.createAxis();
-        // 创建 svg
         this.createCanvasDom();
 
-        // ========DRAW===========
+        this.addEventListener();
+
         // 绘制 色卡图例
         this.overlay && this.drawColorCardLegend();
+
         // 绘制 风羽图例
         this.drawWindLegend();
 
-        this.drawXAxis();
+        this.tooltip = new Tooltip({}, this.containerElement, this.boxModel, this.styleConfig);
 
-        this.drawYAxis();
+        this.setTooltipShow(this.tooltipShow);
 
-        this.drawRect(this.data);
+        this._zoomed = throttle(this.zoomed.bind(this), 30);
 
-        this.drawWindProfile(this.data);
+        this._drawWindProfile = debounce(this.drawWindProfile.bind(this), 300);
 
+        this._tooltipPickUp = throttle(this.tooltipPickUp.bind(this), 30);
 
-        // this.tooltip = new Tooltip({}, this.containerElement, this.boxModel, this.styleConfig);
-
-        // this.setTooltipShow(this.tooltipShow);
+        this.render();
 
         window.wind = this;
     }
 
     /**
-     * 计算数据真实 数值范围
+     * 计算数据 xExtent yExtent x 范围 y 范围
+     * @param {*} data 
      */
-    calculateBboxData () {
+    calculateDataExtent (data) {
+      let maxTimeStamp = 0;
+      let minTimeStamp = Infinity;
+      let maxHeight = 0;
+
+      data.forEach(item => {
+          let timeStamp = moment(item.groundTime).valueOf();
+
+          item[this.timeStampLabel] = timeStamp;
+
+          if (maxTimeStamp < timeStamp) {
+              maxTimeStamp = timeStamp;
+          }
+          if (minTimeStamp > timeStamp) {
+              minTimeStamp = timeStamp;
+          }
+          const metricList = item[this.altitudeListLabel];
+
+          if (metricList && metricList[metricList.length - 1] && (+metricList[metricList.length - 1][this.altitudeLabel]) > maxHeight) {
+              maxHeight = (+metricList[metricList.length - 1][this.altitudeLabel]);
+              heightSize = metricList.length - 1;
+          }
+      })
+
+      console.log(minTimeStamp, maxTimeStamp, maxHeight);
+      this.xExtent = [minTimeStamp, maxTimeStamp];
+      this.yExtent = [0, maxHeight];
+  }
+
+    /**
+     * 计算可视范围数据 数值范围
+     */
+    calculateViewDataExtent (viewData) {
         let maxTimeStamp = 0;
         let minTimeStamp = Infinity;
         let maxHeight = 0;
         let heightSize = 0;
-        this.data.forEach(item => {
+        viewData.forEach(item => {
             let timeStamp = moment(item.groundTime).valueOf()
             item[this.timeStampLabel] = timeStamp
             if (maxTimeStamp < timeStamp) {
@@ -104,35 +145,40 @@ export class WindProfileCanvas {
                 heightSize = metricList.length - 1;
             }
         })
-        this.widthSize = this.data.length;
+        this.widthSize = viewData.length;
         this.heightSize = heightSize;
-        console.log(minTimeStamp, maxTimeStamp, maxHeight);
-        this.bboxData = { maxX: maxTimeStamp, minX: minTimeStamp, minY: 0, maxY: maxHeight };
+
+        this.viewXExtent = [minTimeStamp, maxTimeStamp];
+        this.viewYExtent = [0, maxHeight];
     }
     
     /**
      * 计算视图 盒子范围
      */
-    calculateBboxView () {
+    calculateViewBoundsExtent () {
         const { width, height } = this.boxModel;
         const { top, right, bottom, left } = this.boxModel.margin;
 
         this.unitWidthPixel = (width - left - right) / this.widthSize;
         this.unitHeightPixel = (height - top - bottom) / this.heightSize;
 
-        this.bboxView = { minX: left, maxX: width - right, minY: height - bottom, maxY: top }
+        this.boundsExtentX = [left, width - right];
+        this.boundsExtentY = [height - bottom, top];
     }
 
     /**
      * 创建比例尺
      */
     createScale () {    
-        const { minX, maxX, minY, maxY } = this.bboxData;
+        const minX = this.viewXExtent[0];
+        const maxX = this.viewXExtent[1];
+        const minY = this.viewYExtent[0];
+        const maxY = this.viewYExtent[1];
         
-        const viewMinX = this.bboxView.minX;
-        const viewMaxX = this.bboxView.maxX;
-        const viewMinY = this.bboxView.minY;
-        const viewMaxY = this.bboxView.maxY;
+        const viewMinX = this.boundsExtentX[0];
+        const viewMaxX = this.boundsExtentX[1];
+        const viewMinY = this.boundsExtentY[0];
+        const viewMaxY = this.boundsExtentY[1];
        
 
         this.xScale = d3.scaleLinear()
@@ -146,6 +192,13 @@ export class WindProfileCanvas {
             .range([viewMinY, viewMaxY])
 
         this.invertYScale = this.yScale.invert;
+
+
+        this.xScaleWhole = d3.scaleLinear()
+            .domain([this.xExtent[0], this.xExtent[1]])
+            .range([viewMinX, viewMaxX])
+
+        this.invertXScaleWhole = this.xScaleWhole.invert;
     }
     
 
@@ -161,42 +214,39 @@ export class WindProfileCanvas {
         }
     }
     
+    clearView () {
+      const { width, height } = this.boxModel;
 
-    /**
-     * 筛选 bbox 范围内数据
-     */
-    calcAreaFilter () {
-        const boxArea = this.viewBoxFilter(this.transform);
+      const ctx0 = this.baseCanvas.getContext('2d');
+      ctx0.clearRect(0, 0, width, height);
 
-        const { xMinVal, xMaxVal, yMinVal, yMaxVal } = boxArea;
-        
-        const filterArr = [];
-        
-        let maxHeight = -1;
+      const ctx = this.gridCanvas.getContext('2d');
+      ctx.clearRect(0, 0, width, height);
 
-        this.data.forEach(item => {
-            const timeStamp = item[this.timeStampLabel];
-            if (timeStamp <= xMaxVal && timeStamp >= xMinVal) {
-                const obj = { timeStamp: timeStamp, groundTime: item.groundTime }
-                const metrics = [];
-                const metricList = item[this.altitudeListLabel];
-                if (metricList && metricList.length > 0) {
-                    metricList.forEach(mtr => {
-                        mtr[this.altitudeLabel] = +mtr[this.altitudeLabel];
-                        if (mtr && mtr[this.altitudeLabel] > yMinVal && mtr[this.altitudeLabel] < yMaxVal) {
-                            metrics.push(mtr);
-                        }
-                    })
-                }
-                obj[this.altitudeListLabel] = metrics;
-                if (metrics.length > maxHeight) {
-                    maxHeight = metrics.length;
-                }
-                filterArr.push(obj);
-            }
-        })
+      const ctx1 = this.profileCanvas.getContext('2d');
+      ctx1.clearRect(0, 0, width, height);
+    }
 
-        return { maxHeight, filterArr };
+    render() {
+        // 计算 数据区间
+        this.calculateViewDataExtent(this.viewData);
+        // 计算 视图范围
+        this.calculateViewBoundsExtent();
+        // 创建比例尺
+        this.createScale();
+
+        this.clearView();
+
+        this.drawXAxis();
+
+        this.drawYAxis();
+
+        // ========DRAW===========
+
+        this.drawRect(this.viewData);
+
+        this._drawWindProfile(this.viewData);
+
     }
 
     /**
@@ -213,16 +263,17 @@ export class WindProfileCanvas {
 
     /**
      * 叠加 cn2 风切变
-     * @param {*} filterArr 
+     * @param {*} viewData 
      */
 
-    drawRect (filterArr) {
+    drawRect (viewData) {
+      const { width, height } = this.boxModel;
       const ctx = this.gridCanvas.getContext('2d');
       // clip view box
       this.clipViewBox(ctx);
 
       console.time('drawRect');
-      filterArr.forEach(item => {
+      viewData.forEach(item => {
           const x = this.xScale(item[this.timeStampLabel]);
           item[this.altitudeListLabel].forEach((mtr, idx)=> {
               ctx.beginPath();
@@ -236,18 +287,20 @@ export class WindProfileCanvas {
       })
 
       console.timeEnd('drawRect');
-  }
+    }
     /**
      * 绘制风羽图
      * @param {*} filterArr 
      */
-    drawWindProfile (filterArr) {
-      const ctx = this.gridCanvas.getContext('2d');
+    drawWindProfile (viewData) {
+      const ctx = this.profileCanvas.getContext('2d');
+      const { width, height } = this.boxModel;
+
       // clip view box
       this.clipViewBox(ctx);
 
       console.time('drawWindProfile');
-      filterArr.forEach(item => {
+      viewData.forEach(item => {
           const x = this.xScale(item[this.timeStampLabel]);
           item[this.altitudeListLabel].forEach((mtr, idx)=> {
               ctx.beginPath();
@@ -275,6 +328,12 @@ export class WindProfileCanvas {
         const { width, height } = this.boxModel;
         const { top, right, left, bottom } = this.boxModel.margin;
       
+        this.baseCanvas = document.createElement('canvas');
+        this.baseCanvas.width = width;
+        this.baseCanvas.height = height;
+        this.baseCanvas.style.position = "absolute"
+        this.baseCanvas.style.top = "0"
+        this.baseCanvas.style.left = "0"
 
         this.gridCanvas = document.createElement('canvas');
         this.gridCanvas.width = width;
@@ -282,6 +341,7 @@ export class WindProfileCanvas {
         this.gridCanvas.style.position = "absolute"
         this.gridCanvas.style.top = "0"
         this.gridCanvas.style.left = "0"
+        this.gridCanvas.style.pointerEvents = "none"
 
         this.profileCanvas = document.createElement('canvas');
         this.profileCanvas.width = width;
@@ -299,6 +359,7 @@ export class WindProfileCanvas {
              .style('position', 'relative')
              .style('border', '1px solid steelblue')
 
+        container.node().append(this.baseCanvas);
         container.node().append(this.gridCanvas);
         container.node().append(this.profileCanvas);
 
@@ -313,7 +374,6 @@ export class WindProfileCanvas {
             xTicks = xScale.ticks(12), // You may choose tick counts. ex: xScale.ticks(20)
             xTickFormat = this.timeFormat; // you may choose the format. ex: xScale.tickFormat(tickCount, ".0s")
 
-        context.translate(0.5, 0.5);
         context.strokeStyle = "black";
         context.lineWidth = 1;
 
@@ -348,7 +408,7 @@ export class WindProfileCanvas {
     drawXAxis () {
       const { width, height } = this.boxModel;
       const { left, right, bottom } = this.boxModel.margin;
-      const ctx = this.gridCanvas.getContext('2d');
+      const ctx = this.baseCanvas.getContext('2d');
       this._drawXAxis(ctx, this.xScale, height - bottom, [left, width - right]);  
     }
 
@@ -369,8 +429,6 @@ export class WindProfileCanvas {
         context.stroke();
       
         context.beginPath();
-        // context.moveTo(X + tickSize, startY);
-        // context.lineTo(X, startY);
         context.moveTo(X, startY);
         context.lineTo(X, endY);
         context.lineTo(X - tickSize, endY);
@@ -383,13 +441,13 @@ export class WindProfileCanvas {
           context.beginPath();
           context.fillText(yTickFormat(d), X - tickSize - tickPadding, yScale(d));
         });
-      }
+    }
 
     drawYAxis () {
       const { top } = this.boxModel.margin;
       const { width, height } = this.boxModel;
       const { left, right, bottom } = this.boxModel.margin;
-      const ctx = this.gridCanvas.getContext('2d');
+      const ctx = this.baseCanvas.getContext('2d');
       this._drawYAxis(ctx, this.yScale, left, [height - bottom, top]); 
     }
     /**
@@ -424,19 +482,19 @@ export class WindProfileCanvas {
         this.containerElement.append(windLegend);
     }
 
-    // setTooltipShow (show) {
-    //     this.tooltipShow = show;
-    //     if (this.svg) {
-    //         if (this.tooltipShow) {
-    //             this.svg.on('mousemove', (event) => { 
-    //                 this._tooltipPickUp(event.offsetX, event.offsetY)
-    //             });
-    //         } else {
-    //             this.svg.on('mousemove', () => {});
-    //             this.tooltip.removeElement();
-    //         }
-    //     }
-    // }
+    setTooltipShow (show) {
+        this.tooltipShow = show;
+        if (this.baseCanvas) {
+            if (this.tooltipShow) {
+                this.baseCanvas.addEventListener('mousemove', (event) => { 
+                    this._tooltipPickUp(event.offsetX, event.offsetY)
+                });
+            } else {
+                this.baseCanvas.addEventListener('mousemove', () => {});
+                this.tooltip.removeElement();
+            }
+        }
+    }
 
     /**
      * 
@@ -444,53 +502,103 @@ export class WindProfileCanvas {
      * @param {*} offsetY 
      */
     tooltipPickUp (offsetX, offsetY) {
-        // const { width, height } = this.boxModel;
-        // const { top, right, left, bottom } = this.boxModel.margin;
+        const { width, height } = this.boxModel;
+        const { top, right, left, bottom } = this.boxModel.margin;
 
-        // const x = offsetX - left;
-        // const y = offsetY - top;
-        // if (top <= offsetY && offsetY <= height - bottom && offsetX >= left && offsetX <= width - right) {
-        //     const timeStamp = this.widthPiexlToColDataVal(x, this.transform);
-        //     const height = this.heightPiexlToRowDataVal(y, this.transform);
+        const x = offsetX;
+        const y = offsetY;
+        if (top <= offsetY && offsetY <= height - bottom && offsetX >= left && offsetX <= width - right) {
+            const timeStamp = this.invertXScale(x);
+            const height = this.invertYScale(y);
             
-        //     let pickUpX = -1, pickUpY = -1;
-        //     let deltaTime = Infinity;    
-        //     for(let i = 0; i < this.data.length; i++){
-        //         const absDiff = Math.abs(this.data[i][this.timeStampLabel] - timeStamp);
-        //         if (absDiff < deltaTime) {
-        //             deltaTime = this.data[i][this.timeStampLabel] - timeStamp;
-        //             pickUpX = i;
-        //         }
-        //     }
+            let pickUpX = -1, pickUpY = -1;
+            let deltaTime = Infinity;    
+            for(let i = 0; i < this.data.length; i++){
+                const absDiff = Math.abs(this.data[i][this.timeStampLabel] - timeStamp);
+                if (absDiff < deltaTime) {
+                    deltaTime = this.data[i][this.timeStampLabel] - timeStamp;
+                    pickUpX = i;
+                }
+            }
 
-        //     const metricList = this.data[pickUpX][this.altitudeListLabel] || [];
-        //     for(let k = 0; k < metricList.length; k++) {
-        //         if (+metricList[k][this.altitudeLabel] < height && height <= +metricList[metricList.length -1][this.altitudeLabel]) {
-        //             let delta1 = Math.abs(height - (+metricList[k][this.altitudeLabel]));
-        //             let delta2 = Math.abs(height - (+metricList[k + 1] ? +metricList[k + 1][this.altitudeLabel] : 0));
-        //             pickUpY = delta1 < delta2 ? k : k + 1;
-        //         }
-        //     }
-        //     if (metricList.length > 0 && metricList[pickUpY]) {
-        //         const groundTime = moment(this.data[pickUpX][this.timeStampLabel]).format('YYYY-MM-DD HH:mm:ss');
+            const metricList = this.data[pickUpX][this.altitudeListLabel] || [];
+            for(let k = 0; k < metricList.length; k++) {
+                if (+metricList[k][this.altitudeLabel] < height && height <= +metricList[metricList.length -1][this.altitudeLabel]) {
+                    let delta1 = Math.abs(height - (+metricList[k][this.altitudeLabel]));
+                    let delta2 = Math.abs(height - (+metricList[k + 1] ? +metricList[k + 1][this.altitudeLabel] : 0));
+                    pickUpY = delta1 < delta2 ? k : k + 1;
+                }
+            }
+            if (metricList.length > 0 && metricList[pickUpY]) {
+                const groundTime = moment(this.data[pickUpX][this.timeStampLabel]).format('YYYY-MM-DD HH:mm:ss');
 
-        //         const { hei, vv, vh, cn2, dir, chop } = metricList[pickUpY];
-        //         let options = [
-        //             { name: '时间:', value: groundTime, unit: '' },
-        //             { name: '高度:', value: hei, unit: 'm' },
-        //             { name: '风向:', value: dir, unit: '°' },
-        //             { name: '风速',  value: vh, unit: 'm/s' },
-        //             { name: '垂直风速', value: vv, unit: 'm/s' },
-        //             { name: 'CN²', value: cn2, unit: '' },
-        //             { name: '风切变', value: chop, unit: 'l/s' }
-        //         ]
-        //         this.tooltip.updateElement(options, offsetX, offsetY);
-        //     } else {
-        //         this.tooltip.removeElement();
-        //     }
-        // } else {
-        //     this.tooltip.removeElement();
-        // }
+                const { hei, vv, vh, cn2, dir, chop } = metricList[pickUpY];
+                let options = [
+                    { name: '时间:', value: groundTime, unit: '' },
+                    { name: '高度:', value: hei, unit: 'm' },
+                    { name: '风向:', value: dir, unit: '°' },
+                    { name: '风速',  value: vh, unit: 'm/s' },
+                    { name: '垂直风速', value: vv, unit: 'm/s' },
+                    { name: 'CN²', value: cn2, unit: '' },
+                    { name: '风切变', value: chop, unit: 'l/s' }
+                ]
+                this.tooltip.updateElement(options, offsetX, offsetY);
+            } else {
+                this.tooltip.removeElement();
+            }
+        } else {
+            this.tooltip.removeElement();
+        }
+    }
+
+    zoomed (transform) {
+      const { width, height } = this.boxModel;
+      const { top, right, left, bottom } = this.boxModel.margin;
+
+
+      const minX = transform.invertX(left);
+      const maxX = transform.invertX(width - right);
+
+      console.log('(minX, maxX) =>', minX, maxX, maxX - minX);
+
+      const minTimeStamp = this.invertXScaleWhole(minX);
+      const maxTimeStamp = this.invertXScaleWhole(maxX);
+
+      if (minTimeStamp < this.xExtent[1] && maxTimeStamp > this.xExtent[0]) {
+        this.viewData = this.data.filter(item => {
+          return item.timeStamp > minTimeStamp && item.timeStamp < maxTimeStamp
+        })
+
+      }
+      this.render();
+    }
+
+    cursorInXAxis (e) {
+      const { width, height } = this.boxModel;
+      const { top, right, left, bottom } = this.boxModel.margin;
+      // console.log('e ==>', e);
+      const { offsetX, offsetY} = e;
+
+      if (offsetX > left && offsetX < width - right && offsetY > height - bottom && offsetY < height) {
+        console.log('cursorInXAxis');
+        this.baseCanvas.style.cursor = 'move';
+        return true;
+      } else {
+        this.baseCanvas.style.cursor = 'default'
+        return false;
+      }
+    }
+
+    addEventListener () {
+      if (this.baseCanvas) {
+   
+        d3.select(this.baseCanvas).call(d3.zoom()
+          .scaleExtent([1/2, 8])
+          .on("zoom", (e) => {
+             console.log('addEventListener e', e.transform);
+             this._zoomed(e.transform);
+          }));
+      }
     }
     /**
      * 销毁
@@ -508,19 +616,13 @@ export class WindProfileCanvas {
         this._tooltipPickUp.cancel();
 
         this.data = null;
+        this.viewData = null;
 
-        this.transform = null;
-
-        this.svg = null;
-
-        this.bboxData = null;
-        this.bboxView = null;
         this.boxModel = null;
+
         this.xScale = null;
         this.yScale = null;
         this.invertXScale = null;
         this.invertYScale = null;
-        this.xAxis = null;
-        this.yAxis = null;
     }
 }

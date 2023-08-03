@@ -10,9 +10,9 @@ const options = {
         backgroundColor: '#fff', 
         color: '#000',
         tooltip: {
-            fontSize: 14,
-            color: 'orange',
-            background: 'rgba(0, 0, 0, 0.8)'
+            fontSize: 16,
+            color: '#000',
+            background: 'rgba(255, 255, 255, 0.8)'
         }
     } 
 };

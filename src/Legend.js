@@ -88,7 +88,6 @@ function generateDom (linearGradientStyle, colorToValueArr, unit, styleConfig) {
     const colorListStyle = 'height: 328px; margin-bottom: 10px; display: flex; align-items: center;';
     const colorBarStyle = 'width: 24px; height: 100%;';
     const colorValStyle = 'margin-left: 6px; height: 100%; display: flex; flex-direction: column; justify-content: space-between;';
-    console.log(colorToValueArr.map(ctv => `<span>${ctv}</span>`))
     const htmlString = `
         <div style="${chartColorStyle}"> 
             <div style="${unitStyle}" >${unit}</div>
@@ -127,7 +126,6 @@ function colorCalcRage (min, max, size = 10) {
  * @returns 
  */
 function getColorBarStyle (colorArr) {
-    console.log('getColorBar colorArr', colorArr)
     let str = ''
     const len = colorArr.length
     const per = 100 / (colorArr.length - 1)
